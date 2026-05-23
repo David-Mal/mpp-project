@@ -1,0 +1,173 @@
+/* ─────────────────────────────────────────────────────────────
+   ANIMATIONS.CSS — Page transitions, micro-interactions,
+   entrance effects, and hover states.
+───────────────────────────────────────────────────────────── */
+
+/* ── Page enter (every top-level view) ── */
+@keyframes pageSlideIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pageFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.page-enter {
+  animation: pageSlideIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Auth panels stagger ── */
+.auth-left  { animation: slideInLeft  0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.auth-right { animation: slideInRight 0.55s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both; }
+
+/* ── Landing page stagger ── */
+.presentation__left  { animation: slideInLeft  0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.presentation__right { animation: slideInRight 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both; }
+
+.presentation__eyebrow  { animation: pageFadeIn 0.5s ease 0.3s both; }
+.presentation__title    { animation: pageSlideIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.25s both; }
+.presentation__tagline  { animation: pageFadeIn 0.5s ease 0.5s both; }
+.presentation__description { animation: pageFadeIn 0.5s ease 0.55s both; }
+.presentation__cta      { animation: pageFadeIn 0.5s ease 0.65s both; }
+
+.pillar { animation: pageSlideIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.pillar:nth-child(1) { animation-delay: 0.35s; }
+.pillar:nth-child(2) { animation-delay: 0.5s; }
+.pillar:nth-child(3) { animation-delay: 0.65s; }
+
+/* ── Table rows stagger ── */
+@keyframes rowEnter {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.table-row {
+  animation: rowEnter 0.35s ease both;
+}
+.table-row:nth-child(1) { animation-delay: 0.05s; }
+.table-row:nth-child(2) { animation-delay: 0.10s; }
+.table-row:nth-child(3) { animation-delay: 0.15s; }
+.table-row:nth-child(4) { animation-delay: 0.20s; }
+.table-row:nth-child(5) { animation-delay: 0.25s; }
+
+/* ── Statistics rows ── */
+.stat-row {
+  animation: rowEnter 0.35s ease both;
+  animation-delay: var(--row-delay, 0ms);
+}
+
+/* ── SVG Bar chart bars ── */
+@keyframes barGrow {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.bar-animate {
+  animation: barGrow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Donut slices ── */
+@keyframes donutFade {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 0.9; transform: scale(1); }
+}
+.donut-slice {
+  animation: donutFade 0.5s ease both;
+  transform-origin: 80px 75px;
+}
+.donut-slice:nth-child(1) { animation-delay: 0.0s; }
+.donut-slice:nth-child(2) { animation-delay: 0.1s; }
+.donut-slice:nth-child(3) { animation-delay: 0.2s; }
+.donut-slice:nth-child(4) { animation-delay: 0.3s; }
+.donut-slice:nth-child(5) { animation-delay: 0.4s; }
+
+/* ── KPI cards ── */
+@keyframes kpiPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.kpi-card {
+  animation: kpiPop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.kpi-card:nth-child(1) { animation-delay: 0.05s; }
+.kpi-card:nth-child(2) { animation-delay: 0.12s; }
+.kpi-card:nth-child(3) { animation-delay: 0.19s; }
+.kpi-card:nth-child(4) { animation-delay: 0.26s; }
+
+/* ── Toast slide-up ── */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.toast { animation: toastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── Gold shimmer on brand text ── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.auth-brand {
+  background: linear-gradient(90deg, #c9a84c 20%, #f0ebe0 50%, #c9a84c 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite 0.8s;
+}
+
+/* ── Pulse dot for low-stock indicator ── */
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(192, 80, 80, 0.5); }
+  50%       { box-shadow: 0 0 0 4px rgba(192, 80, 80, 0); }
+}
+.pulse-dot { animation: pulse 2s infinite; }
+
+/* ── Hover lift on cards ── */
+.stat-chart-block {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.stat-chart-block:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ── Icon button spin on hover ── */
+.icon-btn { transition: transform 0.2s ease, color 0.2s ease; }
+.icon-btn:hover { transform: scale(1.2); }
+
+/* ── CTA button glow ── */
+.presentation__cta {
+  transition: background 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+.presentation__cta:hover {
+  background: rgba(201, 168, 76, 0.15);
+  box-shadow: 0 0 24px rgba(201, 168, 76, 0.2);
+  transform: translateY(-1px);
+}
+
+/* ── Auth button pulse while loading ── */
+@keyframes btnPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+.auth-btn--loading { animation: btnPulse 1s ease infinite; }
+
+/* ── Nav brand glow on hover ── */
+.logo:hover .logo__name {
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.5);
+  transition: text-shadow 0.3s ease;
+}
+
+/* ── Detail image crossfade ── */
+.detail__main-img {
+  transition: opacity 0.35s ease;
+}
+.detail__main-img.fading { opacity: 0; }
+

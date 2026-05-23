@@ -1,0 +1,8 @@
+// sequelize-cli configuration — loaded as CommonJS regardless of project type
+const path = require('path');
+module.exports = {
+  'config':          path.resolve(__dirname, 'backend/config/config.cjs'),
+  'models-path':     path.resolve(__dirname, 'backend/models'),
+  'seeders-path':    path.resolve(__dirname, 'backend/seeders'),
+  'migrations-path': path.resolve(__dirname, 'backend/migrations'),
+};

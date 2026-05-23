@@ -1,0 +1,247 @@
+/* ─────────────────────────────────────────────────────────────
+   GOLD STYLES
+   - Master toolbar (search + sort + count)
+   - Infinite scroll sentinel
+   - Reviews panel
+   ───────────────────────────────────────────────────────────── */
+
+/* ── Master toolbar ─────────────────────────────────────────── */
+.master__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 56px;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+@media (max-width: 900px) {
+  .master__toolbar { padding: 10px 16px; flex-wrap: wrap; }
+}
+.search-input {
+  flex: 1;
+  min-width: 160px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(201,168,76,0.25);
+  color: #f0ebe0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-input::placeholder { color: rgba(240,235,224,0.35); }
+.search-input:focus { border-color: #c9a84c; }
+
+.sort-select {
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(201,168,76,0.25);
+  color: #f0ebe0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  padding: 8px 10px;
+  outline: none;
+  cursor: pointer;
+}
+.sort-select option { background: #141414; }
+
+.master__count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgba(201,168,76,0.5);
+  white-space: nowrap;
+}
+
+/* ── Infinite scroll sentinel ───────────────────────────────── */
+.table-sentinel {
+  padding: 16px 0;
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  color: rgba(240,235,224,0.3);
+}
+.table-sentinel--end {
+  color: rgba(201,168,76,0.35);
+}
+
+/* ── Reviews panel ──────────────────────────────────────────── */
+.reviews-panel {
+  padding: 40px 56px 56px;
+  border-top: 1px solid rgba(201,168,76,0.12);
+  margin-top: 32px;
+}
+@media (max-width: 900px) {
+  .reviews-panel { padding: 28px 16px 40px; }
+}
+
+.reviews-panel__header { margin-bottom: 24px; }
+.reviews-panel__title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: rgba(201,168,76,0.8);
+  margin: 0 0 10px;
+  font-weight: 500;
+}
+.reviews-panel__divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, #c9a84c, transparent);
+}
+
+/* Summary row */
+.reviews-panel__summary {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  margin-bottom: 28px;
+  padding: 18px 20px;
+  background: rgba(201,168,76,0.04);
+  border: 1px solid rgba(201,168,76,0.12);
+}
+.reviews-panel__avg-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 72px;
+}
+.reviews-panel__avg-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px;
+  color: #f0ebe0;
+  line-height: 1;
+}
+.reviews-panel__avg-sub {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: rgba(240,235,224,0.4);
+  white-space: nowrap;
+}
+.reviews-panel__bars { min-width: 0; }
+
+/* Add review form */
+.reviews-panel__form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 32px;
+  padding: 20px;
+  border: 1px solid rgba(201,168,76,0.15);
+  background: rgba(0,0,0,0.2);
+}
+.reviews-panel__form-row {
+  display: flex;
+  gap: 10px;
+}
+.reviews-panel__input,
+.reviews-panel__textarea {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: #f0ebe0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  padding: 9px 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  resize: none;
+}
+.reviews-panel__input { flex: 1; }
+.reviews-panel__textarea { width: 100%; }
+.reviews-panel__input:focus,
+.reviews-panel__textarea:focus { border-color: #c9a84c; }
+.reviews-panel__input::placeholder,
+.reviews-panel__textarea::placeholder { color: rgba(240,235,224,0.3); }
+
+.reviews-panel__select {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: #f0ebe0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  padding: 9px 10px;
+  outline: none;
+  cursor: pointer;
+  min-width: 80px;
+}
+.reviews-panel__select option { background: #141414; }
+
+.reviews-panel__form-error {
+  color: #d88a8a;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  margin: 0;
+}
+.reviews-panel__submit {
+  align-self: flex-start;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  padding: 9px 22px;
+  background: transparent;
+  color: #c9a84c;
+  border: 1px solid #c9a84c;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.reviews-panel__submit:hover:not(:disabled) { background: rgba(201,168,76,0.1); }
+.reviews-panel__submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Reviews list */
+.reviews-panel__list { display: flex; flex-direction: column; gap: 1px; }
+.reviews-panel__loading,
+.reviews-panel__empty {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  color: rgba(240,235,224,0.4);
+  font-size: 15px;
+  padding: 20px 0;
+}
+
+.reviews-panel__item {
+  padding: 18px 0;
+  border-bottom: 1px solid rgba(201,168,76,0.08);
+}
+.reviews-panel__item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.reviews-panel__author {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: #f0ebe0;
+  font-weight: 600;
+}
+.reviews-panel__delete {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(216,138,138,0.3);
+  color: rgba(216,138,138,0.6);
+  font-size: 14px;
+  width: 24px; height: 24px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.reviews-panel__delete:hover { border-color: #d88a8a; color: #d88a8a; }
+.reviews-panel__comment {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  color: rgba(240,235,224,0.7);
+  line-height: 1.65;
+  margin: 0 0 6px;
+}
+.reviews-panel__date {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: rgba(240,235,224,0.3);
+}
