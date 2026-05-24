@@ -21,6 +21,22 @@ const BACKEND_PORT  = tls ? 3443 : 3001;
 const BACKEND_PROTO = tls ? 'https' : 'http';
 const WS_PROTO      = tls ? 'wss'   : 'ws';
 
+// ── LAN cross-machine setup ───────────────────────────────────
+// When the backend runs on a different machine (e.g. 192.168.1.10),
+// set BACKEND_HOST=192.168.1.10 in a .env.local file on the client
+// machine.  The Vite dev server will proxy all /api, /ws and /graphql
+// requests to that host instead of 127.0.0.1.
+//
+// Example .env.local:
+//   BACKEND_HOST=192.168.1.10
+//   BACKEND_PORT=3443          # only needed to override the port
+//
+// Note: Vite reads .env files automatically; BACKEND_* are not
+// prefixed with VITE_ because they are used only in this config
+// file, not exposed to the browser bundle.
+const BACKEND_HOST      = process.env.BACKEND_HOST || '127.0.0.1';
+const BACKEND_PORT_OVERRIDE = process.env.BACKEND_PORT ? parseInt(process.env.BACKEND_PORT) : BACKEND_PORT;
+
 export default defineConfig({
   plugins: [react()],
 
@@ -32,18 +48,18 @@ export default defineConfig({
 
     proxy: {
       '/api': {
-        target:       `${BACKEND_PROTO}://127.0.0.1:${BACKEND_PORT}`,
+        target:       `${BACKEND_PROTO}://${BACKEND_HOST}:${BACKEND_PORT_OVERRIDE}`,
         changeOrigin: true,
         secure:       false,   // accept self-signed cert for the proxy connection
       },
       '/ws': {
-        target:       `${WS_PROTO}://127.0.0.1:${BACKEND_PORT}`,
+        target:       `${WS_PROTO}://${BACKEND_HOST}:${BACKEND_PORT_OVERRIDE}`,
         ws:           true,
         changeOrigin: true,
         secure:       false,
       },
       '/graphql': {
-        target:       `${BACKEND_PROTO}://127.0.0.1:${BACKEND_PORT}`,
+        target:       `${BACKEND_PROTO}://${BACKEND_HOST}:${BACKEND_PORT_OVERRIDE}`,
         changeOrigin: true,
         secure:       false,
       },

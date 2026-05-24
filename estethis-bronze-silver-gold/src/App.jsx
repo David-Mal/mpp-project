@@ -171,7 +171,7 @@ export default function App() {
   // ── Reconnect: flush queue then reload ───────────────────────
   const wasOnline = useRef(online);
   useEffect(() => {
-    if (!wasOnline.current && online && auth === 'app') {
+    if (!wasOnline.current && online && authStage === 'app') {
       (async () => {
         if (queue.size() > 0) {
           setSyncing(true);

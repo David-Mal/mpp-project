@@ -13,8 +13,8 @@
 // "Advanced → Proceed" to accept the self-signed cert once.
 // ─────────────────────────────────────────────────────────────
 
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { execFileSync, execSync } from 'node:child_process';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { networkInterfaces } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -67,9 +67,39 @@ IP.2  = ${lanIp}
 
 writeFileSync(cnfPath, cnf);
 
-const openssl = process.platform === 'win32'
-  ? 'C:\\msys64\\ucrt64\\bin\\openssl.exe'
-  : 'openssl';
+function findOpenssl() {
+  if (process.platform !== 'win32') return 'openssl';
+
+  // 1. Try whatever is on PATH first (works for OpenSSL installed via winget / chocolatey)
+  try { execSync('openssl version', { stdio: 'ignore' }); return 'openssl'; } catch { /* not in PATH */ }
+
+  // 2. Fall back to well-known Windows installation directories
+  const candidates = [
+    'C:\\msys64\\ucrt64\\bin\\openssl.exe',
+    'C:\\msys64\\mingw64\\bin\\openssl.exe',
+    'C:\\msys64\\usr\\bin\\openssl.exe',
+    'C:\\Program Files\\Git\\usr\\bin\\openssl.exe',
+    'C:\\Program Files\\OpenSSL-Win64\\bin\\openssl.exe',
+    'C:\\Program Files\\OpenSSL\\bin\\openssl.exe',
+    'C:\\OpenSSL-Win64\\bin\\openssl.exe',
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      console.log(`Found OpenSSL at: ${p}`);
+      return p;
+    }
+  }
+  throw new Error(
+    'OpenSSL executable not found.\n' +
+    'Install it via one of:\n' +
+    '  • winget install ShiningLight.OpenSSL.Light\n' +
+    '  • choco install openssl\n' +
+    '  • Include the OpenSSL bin directory in your PATH\n' +
+    '  • Install MSYS2 (https://www.msys2.org/) and run: pacman -S mingw-w64-ucrt-x86_64-openssl',
+  );
+}
+
+const openssl = findOpenssl();
 
 execFileSync(openssl, [
   'req', '-x509',

@@ -12,6 +12,7 @@ import chatRouter   from './chat/chatRoutes.js';
 import adminRouter  from './adminRoutes.js';
 import { loadUser } from './authMiddleware.js';
 import { actionLoggerMiddleware } from './actionLogger.js';
+import { authLimiter } from './rateLimit.js';
 import repository from './repository.js';
 import * as gen   from './generator.js';
 import { yogaHandler } from './graphql/index.js';
@@ -46,7 +47,12 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// ── Auth (Step 1) ─────────────────────────────────────────────
+// ── Auth (Step 1) — rate-limited login/register ───────────────
+// authLimiter: max 10 attempts per IP per 15-minute window.
+// Applied only to /login and /register (write paths), not to
+// /me, /logout, or /users which are already auth-gated.
+app.post('/api/auth/login',    authLimiter);
+app.post('/api/auth/register', authLimiter);
 app.use('/api/auth', authRouter);
 
 // ── Admin (Step 3 & 4) ────────────────────────────────────────

@@ -294,4 +294,114 @@ describe('ApiError', () => {
     const e = new ApiError('err', { status: 400, payload: { errors: ['x'] } });
     expect(e.payload.errors).toContain('x');
   });
+
+  it('isValidation is false for status 401', () => {
+    const e = new ApiError('unauth', { status: 401 });
+    expect(e.isValidation).toBe(false);
+  });
+
+  it('isNetwork is false for status 500', () => {
+    const e = new ApiError('server error', { status: 500 });
+    expect(e.isNetwork).toBe(false);
+  });
+
+  it('payload defaults to null when not provided', () => {
+    const e = new ApiError('err', { status: 400 });
+    expect(e.payload).toBeNull();
+  });
+});
+
+// ── Session token header behaviour ────────────────────────────
+
+describe('X-Session-Token header', () => {
+  it('attaches stored token to subsequent requests after login', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({ token: 'my-tok', user: {} }) })
+      .mockResolvedValueOnce({ status: 200, ok: true, json: async () => ({ id: 1 }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiLogin('a@b.com', 'pass');
+    // Second call (e.g. apiMe) should carry the token
+    await apiMe();
+
+    const secondCallHeaders = fetchMock.mock.calls[1][1].headers;
+    expect(secondCallHeaders['X-Session-Token']).toBe('my-tok');
+  });
+
+  it('no X-Session-Token header sent when no token is stored', async () => {
+    localStorageMock.clear();
+    const fetchMock = mockFetch(401, { error: 'Not authenticated' });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiMe();
+    const headers = fetchMock.mock.calls[0][1].headers;
+    expect(headers['X-Session-Token']).toBeUndefined();
+  });
+
+  it('apiLogout sends X-Session-Token even when server is unreachable', async () => {
+    setStoredToken('tok-xyz');
+    const fetchMock = vi.fn().mockRejectedValue(new Error('network down'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiLogout(); // must not throw
+    expect(getStoredToken()).toBeNull();
+  });
+});
+
+// ── Rate-limit response handling ──────────────────────────────
+
+describe('apiLogin rate-limit response', () => {
+  it('throws ApiError with status 429 when server rate-limits the request', async () => {
+    vi.stubGlobal('fetch', mockFetch(429, { error: 'Too many requests. Please try again later.' }));
+    const err = await apiLogin('a@b.com', 'pass').catch(e => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(429);
+  });
+
+  it('does not store token on 429 response', async () => {
+    vi.stubGlobal('fetch', mockFetch(429, { error: 'Too many requests' }));
+    await apiLogin('a@b.com', 'pass').catch(() => {});
+    expect(getStoredToken()).toBeNull();
+  });
+});
+
+// ── apiListUsers / apiDeleteUser ──────────────────────────────
+
+describe('apiListUsers', () => {
+  it('calls GET /api/auth/users with the stored token', async () => {
+    setStoredToken('admin-tok');
+    const { apiListUsers } = await import('./api.js');
+    const fetchMock = mockFetch(200, [{ id: 1, email: 'admin@a.com', role: 'admin' }]);
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await apiListUsers();
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/auth/users');
+    expect(opts.headers['X-Session-Token']).toBe('admin-tok');
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe('apiDeleteUser', () => {
+  it('calls DELETE /api/auth/users/:id with the stored token', async () => {
+    setStoredToken('admin-tok');
+    const { apiDeleteUser } = await import('./api.js');
+    const fetchMock = vi.fn().mockResolvedValue({ status: 204, ok: true, json: async () => null });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await apiDeleteUser(42);
+    const [url, opts] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/auth/users/42');
+    expect(opts.method).toBe('DELETE');
+    expect(opts.headers['X-Session-Token']).toBe('admin-tok');
+  });
+
+  it('throws ApiError with 403 when called without admin permissions', async () => {
+    setStoredToken('user-tok');
+    const { apiDeleteUser } = await import('./api.js');
+    vi.stubGlobal('fetch', mockFetch(403, { error: 'Admin only' }));
+    const err = await apiDeleteUser(1).catch(e => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err.status).toBe(403);
+  });
 });

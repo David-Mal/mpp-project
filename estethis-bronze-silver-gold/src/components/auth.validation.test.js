@@ -136,4 +136,72 @@ describe('validateLogin', () => {
     const errs = validateLogin({ email: 'a@b.com', password: '   ' });
     expect(errs.password).toBeTruthy();
   });
+
+  it('only one error when only email is missing', () => {
+    const errs = validateLogin({ email: '', password: 'pass' });
+    expect(Object.keys(errs)).toHaveLength(1);
+    expect(errs.email).toBeTruthy();
+    expect(errs.password).toBeUndefined();
+  });
+
+  it('only one error when only password is missing', () => {
+    const errs = validateLogin({ email: 'a@b.com', password: '' });
+    expect(Object.keys(errs)).toHaveLength(1);
+    expect(errs.password).toBeTruthy();
+    expect(errs.email).toBeUndefined();
+  });
+});
+
+// ── Cross-field interaction tests ─────────────────────────────
+
+describe('validateRegister cross-field interactions', () => {
+  it('password error does not affect phone error independently', () => {
+    const errs = validateRegister({ ...VALID_REGISTER, phone: '', password: '123', confirm: '123' });
+    expect(errs.phone).toBeTruthy();
+    expect(errs.password).toBeTruthy();
+    expect(errs.email).toBeUndefined();
+  });
+
+  it('confirm error is independent of email error', () => {
+    const errs = validateRegister({ ...VALID_REGISTER, email: 'bad', confirm: 'notmatch' });
+    expect(errs.email).toBeTruthy();
+    expect(errs.confirm).toBeTruthy();
+    expect(errs.phone).toBeUndefined();
+  });
+
+  it('all four errors when every field is invalid', () => {
+    const errs = validateRegister({ phone: '', email: 'bad', password: '12', confirm: 'xyz' });
+    expect(errs.phone).toBeTruthy();
+    expect(errs.email).toBeTruthy();
+    expect(errs.password).toBeTruthy();
+    expect(errs.confirm).toBeTruthy();
+  });
+
+  it('no errors when confirm matches a long password', () => {
+    const long = 'a-very-long-secure-password-123!@#';
+    const errs = validateRegister({ ...VALID_REGISTER, password: long, confirm: long });
+    expect(errs.password).toBeUndefined();
+    expect(errs.confirm).toBeUndefined();
+  });
+
+  it('confirm error when passwords differ by one character', () => {
+    const errs = validateRegister({ ...VALID_REGISTER, password: 'secret1', confirm: 'secret2' });
+    expect(errs.confirm).toBeTruthy();
+  });
+
+  it('phone with only spaces gives phone error', () => {
+    const errs = validateRegister({ ...VALID_REGISTER, phone: '     ' });
+    expect(errs.phone).toBeTruthy();
+  });
+
+  it('email with @ but nothing after domain still accepted by @ check', () => {
+    // Our check is minimal (includes '@') — this tests the boundary behaviour.
+    const errs = validateRegister({ ...VALID_REGISTER, email: 'user@' });
+    expect(errs.email).toBeUndefined(); // passes the @ check
+  });
+
+  it('email with no @ gives email error regardless of other fields', () => {
+    const errs = validateRegister({ ...VALID_REGISTER, email: 'notanemail.com' });
+    expect(errs.email).toBeTruthy();
+  });
 });
