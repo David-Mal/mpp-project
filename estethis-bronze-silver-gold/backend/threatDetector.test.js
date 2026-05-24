@@ -10,8 +10,9 @@ import app from './app.js';
 import { ActionLog, ObservationEntry, User } from './models/index.js';
 import authSeed from './authSeed.js';
 import { runThreatDetection, RULES } from './threatDetector.js';
+import { authLimiter } from './rateLimit.js';
 
-const SEEDED_EMAILS = ['admin@estethis.com', 'user@estethis.com'];
+const SEEDED_EMAILS = ['admin@estethis.com', 'manager@estethis.com', 'user@estethis.com'];
 
 beforeAll(async () => {
   await authSeed();
@@ -21,6 +22,7 @@ beforeEach(async () => {
   await ObservationEntry.destroy({ where: {} });
   await ActionLog.destroy({ where: {} });
   await User.destroy({ where: { email: { [Op.notIn]: SEEDED_EMAILS } } });
+  authLimiter._reset(); // prevent rate-limit bleed between tests
 });
 
 async function loginAs(email, password) {

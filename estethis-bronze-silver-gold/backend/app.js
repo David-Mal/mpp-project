@@ -4,6 +4,9 @@
 
 import express    from 'express';
 import cors       from 'cors';
+import path       from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import 'dotenv/config';
 import router     from './routes.js';
 import reviewsRouter from './reviewsRoutes.js';
@@ -16,6 +19,8 @@ import { authLimiter } from './rateLimit.js';
 import repository from './repository.js';
 import * as gen   from './generator.js';
 import { yogaHandler } from './graphql/index.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = express();
 
@@ -69,5 +74,18 @@ app.use('/api', reviewsRouter);
 
 // ── GraphQL (Gold) ───────────────────────────────────────────
 app.use(yogaHandler.graphqlEndpoint, yogaHandler);
+
+// ── Serve built frontend (LAN / production mode) ─────────────
+// When `npm run build` has been run, serve the dist/ folder so
+// the phone can access the full app from a single HTTPS port
+// without needing to trust a second certificate.
+const DIST = path.join(__dirname, '..', 'dist');
+if (existsSync(DIST)) {
+  app.use(express.static(DIST));
+  // SPA fallback — all non-API paths return index.html
+  app.get(/^(?!\/api|\/ws|\/graphql).*/, (_req, res) => {
+    res.sendFile(path.join(DIST, 'index.html'));
+  });
+}
 
 export default app;

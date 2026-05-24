@@ -22,8 +22,10 @@
     "test:threats": "vitest run backend/threatDetector.test.js",
     "test:db": "vitest run backend/db.test.js",
     "cert": "node generate-cert.js",
+    "cert:mkcert": "node setup-mkcert.js",
+    "prestart:backend": "node backend/kill-port.cjs",
     "start:backend": "node backend/server.js",
-    "dev:all": "concurrently \"node backend/server.js\" \"vite\"",
+    "dev:all": "concurrently \"npm run start:backend\" \"vite\"",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "migrate:undo:all": "sequelize-cli db:migrate:undo:all"

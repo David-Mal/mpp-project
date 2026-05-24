@@ -1,0 +1,22 @@
+node_modules/
+dist/
+coverage/
+
+# TLS certificates — machine-specific, never commit private keys
+certs/server.key
+certs/server.cert
+
+# Environment files — may contain secrets
+.env
+.env.local
+.env.*.local
+
+# SQLite database files
+*.sqlite
+*.db
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log

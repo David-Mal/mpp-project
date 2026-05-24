@@ -111,6 +111,36 @@
 }
 .auth-switch-link:hover { color: #e8c878; }
 
+/* ── Auth tabs (3-way login) ── */
+.auth-tabs {
+  display: flex; gap: 4px;
+  margin-bottom: 18px; margin-top: 4px;
+  border-bottom: 1px solid rgba(201,168,76,0.18);
+  padding-bottom: 0;
+}
+.auth-tab {
+  flex: 1; padding: 8px 4px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 8px; letter-spacing: 0.18em; font-weight: 600;
+  color: rgba(240,235,224,0.35);
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+  text-align: center;
+}
+.auth-tab:hover { color: rgba(240,235,224,0.7); }
+.auth-tab--active {
+  color: #c9a84c;
+  border-bottom-color: #c9a84c;
+}
+
+/* ── Auth info box (demo tokens, instructions) ── */
+.auth-info {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 12px; line-height: 1.55;
+  color: rgba(240,235,224,0.55);
+  margin-top: 10px;
+}
+
 /* ══════════════════════════════════════════════════
    PRESENTATION / LANDING PAGE
 ══════════════════════════════════════════════════ */

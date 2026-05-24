@@ -54,24 +54,31 @@ async function main() {
 
   // ── 1b. Seed roles / permissions / default accounts ───────────
   await authSeed();
-  console.log('  ✓ Auth seed complete (admin@estethis.com / user@estethis.com)');
+  console.log('  ✓ Auth seed complete (admin / manager / user accounts ready)');
 
   // ── 2. Create server (HTTPS preferred, HTTP fallback) ─────────
   const tlsOpts = loadTlsOptions();
 
   let primaryServer;
+  let redirectServer = null; // HTTP→HTTPS redirect; kept in scope for clean shutdown
   let proto;
 
   if (tlsOpts) {
     primaryServer = https.createServer(tlsOpts, app);
     proto = 'https';
-    // Also start an HTTP → HTTPS redirect on PORT
-    const redirectApp = http.createServer((_req, res) => {
+    // HTTP → HTTPS redirect on PORT (3001)
+    redirectServer = http.createServer((_req, res) => {
       const host = _req.headers.host?.replace(/:\d+$/, '') || HOST;
       res.writeHead(301, { Location: `https://${host}:${HTTPS_PORT}${_req.url}` });
       res.end();
     });
-    redirectApp.listen(PORT, HOST, () =>
+    redirectServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE')
+        console.warn(`  ⚠  HTTP redirect port ${PORT} already in use — redirect disabled`);
+      else
+        console.warn('  ⚠  Redirect server error:', err.message);
+    });
+    redirectServer.listen(PORT, HOST, () =>
       console.log(`  ↪ HTTP redirect http://${HOST}:${PORT} → https://${HOST}:${HTTPS_PORT}`));
   } else {
     console.warn('  ⚠  No TLS certificate found — falling back to HTTP');
@@ -92,8 +99,7 @@ async function main() {
       console.log(`  │   WebSocket  wss://${HOST}:${listenPort}/ws              │`);
       console.log(`  │   Health     ${proto}://${HOST}:${listenPort}/api/health  │`);
       if (tlsOpts) {
-        console.log(`  │   TLS cert   certs/server.cert (self-signed)         │`);
-        console.log(`  │   NOTE: accept the browser security warning once     │`);
+        console.log(`  │   TLS cert   certs/server.cert                       │`);
       }
       console.log('  └──────────────────────────────────────────────────────┘');
       resolve();
@@ -130,6 +136,7 @@ async function main() {
       console.log(`\n[${sig}] shutting down…`);
       generator.stop();
       await realtime.close();
+      if (redirectServer) redirectServer.close();
       primaryServer.close(async () => {
         await sequelize.close();
         await mongoose.disconnect().catch(() => {});

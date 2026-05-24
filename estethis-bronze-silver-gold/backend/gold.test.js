@@ -5,18 +5,32 @@
 // All repository calls are async (SQLite-backed).
 // ─────────────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request    from 'supertest';
 import app        from './app.js';
 import repository from './repository.js';
 import reviewsRepo from './reviewsRepo.js';
+import authSeed from './authSeed.js';
+import { authLimiter } from './rateLimit.js';
 
 const PRODUCT = { name: 'Test Shirt', price: 99, category: 'Tops', stock: 5, colors: ['White'], sizes: ['M'] };
 const REVIEW  = { author: 'Alice R.', rating: 5, comment: 'Absolutely love this shirt!' };
 
+// Token with products:write + reviews:write (manager or admin)
+let adminToken;
+
+beforeAll(async () => {
+  await authSeed();
+  const res = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'admin@estethis.com', password: 'admin123' });
+  adminToken = res.body.token;
+});
+
 beforeEach(async () => {
   await repository.clear();
   await reviewsRepo.clear();
+  authLimiter._reset();
 });
 
 async function gql(query, variables = {}) {
@@ -32,7 +46,10 @@ async function gql(query, variables = {}) {
 describe('Reviews REST — /api/products/:id/reviews', () => {
   let productId;
   beforeEach(async () => {
-    const res = await request(app).post('/api/products').send(PRODUCT);
+    const res = await request(app)
+      .post('/api/products')
+      .set('X-Session-Token', adminToken)
+      .send(PRODUCT);
     productId = res.body.id;
   });
 
@@ -103,7 +120,9 @@ describe('Reviews REST — /api/products/:id/reviews', () => {
     await request(app).post(`/api/products/${productId}/reviews`).send({ ...REVIEW, author: 'Bob T.' });
     expect(await reviewsRepo.getAll()).toHaveLength(2);
 
-    await request(app).delete(`/api/products/${productId}`);
+    await request(app)
+      .delete(`/api/products/${productId}`)
+      .set('X-Session-Token', adminToken);
     expect(await reviewsRepo.getAll()).toHaveLength(0);
   });
 });

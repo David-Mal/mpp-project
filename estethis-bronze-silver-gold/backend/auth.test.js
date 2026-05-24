@@ -12,18 +12,18 @@ import app from './app.js';
 import { User } from './models/index.js';
 import authSeed from './authSeed.js';
 import { authLimiter } from './rateLimit.js';
+import { _clearAll as clearTokenStore } from './tokenStore.js';
 
-const SEEDED_EMAILS = ['admin@estethis.com', 'user@estethis.com'];
+const SEEDED_EMAILS = ['admin@estethis.com', 'manager@estethis.com', 'user@estethis.com'];
 
 beforeAll(async () => {
   await authSeed();
 });
 
 beforeEach(async () => {
-  // Remove any users created during a test, keep the seeded defaults.
   await User.destroy({ where: { email: { [Op.notIn]: SEEDED_EMAILS } } });
-  // Reset the rate-limiter store so tests don't bleed into each other.
   authLimiter._reset();
+  clearTokenStore();
 });
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -456,5 +456,391 @@ describe('session payload returned at login/register', () => {
     for (const p of expected) {
       expect(perms).toContain(p);
     }
+  });
+});
+
+// ── Manager role ──────────────────────────────────────────────
+
+describe('manager role permissions', () => {
+  it('manager can log in with password', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' });
+    expect(res.status).toBe(200);
+    expect(res.body.user.role).toBe('manager');
+  });
+
+  it('manager has products:write but not users:manage', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' });
+    const { permissions } = res.body.user;
+    expect(permissions).toContain('products:write');
+    expect(permissions).toContain('generator:manage');
+    expect(permissions).toContain('users:read');
+    expect(permissions).not.toContain('users:manage');
+  });
+
+  it('manager can POST a product (has products:write)', async () => {
+    const token = (await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' })).body.token;
+    const res = await request(app)
+      .post('/api/products')
+      .set('X-Session-Token', token)
+      .send({ name: 'Manager Product', price: 50, category: 'Tops' });
+    expect(res.status).toBe(201);
+  });
+
+  it('manager cannot delete a user (no users:manage)', async () => {
+    const token = (await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' })).body.token;
+    const res = await request(app)
+      .delete('/api/auth/users/999')
+      .set('X-Session-Token', token);
+    expect(res.status).toBe(403);
+  });
+
+  it('manager can see user list (has users:read via /api/auth/users requires admin role)', async () => {
+    // /api/auth/users is protected by requireAdmin (role check, not permission check)
+    // manager has users:read permission but not the admin ROLE — expects 403
+    const token = (await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' })).body.token;
+    const res = await request(app)
+      .get('/api/auth/users')
+      .set('X-Session-Token', token);
+    expect(res.status).toBe(403);
+  });
+
+  it('three distinct roles exist with different permission scopes', async () => {
+    const [adminRes, mgrRes, userRes] = await Promise.all([
+      request(app).post('/api/auth/login').send({ email: 'admin@estethis.com',   password: 'admin123'   }),
+      request(app).post('/api/auth/login').send({ email: 'manager@estethis.com', password: 'manager123' }),
+      request(app).post('/api/auth/login').send({ email: 'user@estethis.com',    password: 'user123'    }),
+    ]);
+    const adminPerms = adminRes.body.user.permissions;
+    const mgrPerms   = mgrRes.body.user.permissions;
+    const userPerms  = userRes.body.user.permissions;
+
+    // Admin is a superset of manager
+    expect(adminPerms.length).toBeGreaterThan(mgrPerms.length);
+    // Manager is a superset of user
+    expect(mgrPerms.length).toBeGreaterThan(userPerms.length);
+    // Roles are distinct
+    expect(adminRes.body.user.role).toBe('admin');
+    expect(mgrRes.body.user.role).toBe('manager');
+    expect(userRes.body.user.role).toBe('user');
+  });
+});
+
+// ── OTP authentication ────────────────────────────────────────
+
+describe('POST /api/auth/request-otp', () => {
+  it('returns a demo OTP for a known email', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'user@estethis.com' });
+    expect(res.status).toBe(200);
+    expect(res.body._demo_otp).toMatch(/^\d{6}$/);
+    expect(res.body.expiresInSeconds).toBe(600);
+  });
+
+  it('returns a demo OTP for a known phone number', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: '+40700000003' });
+    expect(res.status).toBe(200);
+    expect(res.body._demo_otp).toMatch(/^\d{6}$/);
+  });
+
+  it('returns 404 for unknown identifier', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'nobody@x.com' });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when identifier is missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-otp')
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/login-otp', () => {
+  it('completes login with the correct OTP', async () => {
+    const otpRes = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'user@estethis.com' });
+    const code = otpRes.body._demo_otp;
+
+    const loginRes = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'user@estethis.com', code });
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.token).toBeTruthy();
+    expect(loginRes.body.user.email).toBe('user@estethis.com');
+    expect(loginRes.body.user.role).toBe('user');
+  });
+
+  it('session authMethod is otp', async () => {
+    const otpRes = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'admin@estethis.com' });
+    const code  = otpRes.body._demo_otp;
+    const loginRes = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'admin@estethis.com', code });
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('X-Session-Token', loginRes.body.token);
+    expect(meRes.body.authMethod).toBe('otp');
+  });
+
+  it('rejects wrong OTP with 401', async () => {
+    await request(app).post('/api/auth/request-otp').send({ identifier: 'user@estethis.com' });
+    const res = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'user@estethis.com', code: '000000' });
+    expect(res.status).toBe(401);
+  });
+
+  it('OTP is single-use — second attempt fails', async () => {
+    const otpRes = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'user@estethis.com' });
+    const code = otpRes.body._demo_otp;
+    await request(app).post('/api/auth/login-otp').send({ identifier: 'user@estethis.com', code });
+    const second = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'user@estethis.com', code });
+    expect(second.status).toBe(401);
+  });
+
+  it('returns 400 when code is missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'user@estethis.com' });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Magic-link authentication ─────────────────────────────────
+
+describe('POST /api/auth/request-magic-link', () => {
+  it('returns a demo token for a known email', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'admin@estethis.com' });
+    expect(res.status).toBe(200);
+    expect(res.body._demo_token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.body.expiresInSeconds).toBe(900);
+  });
+
+  it('returns 404 for unknown email', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'ghost@x.com' });
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 400 when email is missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('GET /api/auth/verify-magic-link', () => {
+  it('completes login with a valid magic token', async () => {
+    const magicRes = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'manager@estethis.com' });
+    const token = magicRes.body._demo_token;
+
+    const loginRes = await request(app)
+      .get(`/api/auth/verify-magic-link?token=${token}`);
+    expect(loginRes.status).toBe(200);
+    expect(loginRes.body.token).toBeTruthy();
+    expect(loginRes.body.user.email).toBe('manager@estethis.com');
+    expect(loginRes.body.user.role).toBe('manager');
+  });
+
+  it('session authMethod is magic-link', async () => {
+    const magicRes = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'admin@estethis.com' });
+    const magicToken = magicRes.body._demo_token;
+    const loginRes = await request(app).get(`/api/auth/verify-magic-link?token=${magicToken}`);
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('X-Session-Token', loginRes.body.token);
+    expect(meRes.body.authMethod).toBe('magic-link');
+  });
+
+  it('magic link is single-use — second verification fails', async () => {
+    const magicRes = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'user@estethis.com' });
+    const token = magicRes.body._demo_token;
+    await request(app).get(`/api/auth/verify-magic-link?token=${token}`);
+    const second = await request(app).get(`/api/auth/verify-magic-link?token=${token}`);
+    expect(second.status).toBe(401);
+  });
+
+  it('rejects invalid token with 401', async () => {
+    const res = await request(app)
+      .get('/api/auth/verify-magic-link?token=not-a-real-token');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 when token query param is missing', async () => {
+    const res = await request(app).get('/api/auth/verify-magic-link');
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── Password recovery ─────────────────────────────────────────
+
+describe('POST /api/auth/forgot-password', () => {
+  it('returns a demo reset token for a known email', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'user@estethis.com' });
+    expect(res.status).toBe(200);
+    expect(res.body._demo_token).toMatch(/^[0-9a-f-]{36}$/);
+    expect(res.body.expiresInSeconds).toBe(1800);
+  });
+
+  it('returns 200 even for unknown email (no user enumeration)', async () => {
+    const res = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'nobody@x.com' });
+    expect(res.status).toBe(200);
+    expect(res.body._demo_token).toBeUndefined();
+  });
+
+  it('returns 400 when email is missing', async () => {
+    const res = await request(app).post('/api/auth/forgot-password').send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/reset-password', () => {
+  it('resets the password and allows login with new password', async () => {
+    // Use a throwaway account so seeded user passwords are not changed
+    await request(app).post('/api/auth/register')
+      .send({ email: 'pwreset@test.com', password: 'original1' });
+
+    // Step 1: get reset token
+    const forgotRes = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'pwreset@test.com' });
+    const resetToken = forgotRes.body._demo_token;
+
+    // Step 2: reset
+    const resetRes = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: resetToken, newPassword: 'newPass999' });
+    expect(resetRes.status).toBe(200);
+    expect(resetRes.body.message).toMatch(/updated/i);
+
+    // Step 3: login with new password
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'pwreset@test.com', password: 'newPass999' });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it('reset token is single-use', async () => {
+    // Register a throwaway user so seeded passwords are not changed
+    await request(app)
+      .post('/api/auth/register')
+      .send({ email: 'resettest@test.com', password: 'pass1234' });
+
+    const forgotRes = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'resettest@test.com' });
+    const token = forgotRes.body._demo_token;
+
+    await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token, newPassword: 'firstReset1' });
+
+    const second = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token, newPassword: 'secondReset2' });
+    expect(second.status).toBe(401);
+  });
+
+  it('rejects invalid reset token with 401', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'fake-token', newPassword: 'newPass123' });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects short new password with 400', async () => {
+    const forgotRes = await request(app)
+      .post('/api/auth/forgot-password')
+      .send({ email: 'user@estethis.com' });
+    const token = forgotRes.body._demo_token;
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token, newPassword: '123' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/6 characters/i);
+  });
+
+  it('returns 400 when fields are missing', async () => {
+    const res = await request(app)
+      .post('/api/auth/reset-password')
+      .send({ token: 'tok' }); // missing newPassword
+    expect(res.status).toBe(400);
+  });
+});
+
+// ── authMethod in session payload ─────────────────────────────
+
+describe('authMethod field in session', () => {
+  it('password login sets authMethod = password', async () => {
+    // Use manager account whose password is never changed by other tests
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'manager@estethis.com', password: 'manager123' });
+    expect(loginRes.status).toBe(200);
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('X-Session-Token', loginRes.body.token);
+    expect(meRes.body.authMethod).toBe('password');
+  });
+
+  it('OTP login sets authMethod = otp', async () => {
+    const otpRes = await request(app)
+      .post('/api/auth/request-otp')
+      .send({ identifier: 'user@estethis.com' });
+    const loginRes = await request(app)
+      .post('/api/auth/login-otp')
+      .send({ identifier: 'user@estethis.com', code: otpRes.body._demo_otp });
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('X-Session-Token', loginRes.body.token);
+    expect(meRes.body.authMethod).toBe('otp');
+  });
+
+  it('magic-link login sets authMethod = magic-link', async () => {
+    const magicRes = await request(app)
+      .post('/api/auth/request-magic-link')
+      .send({ email: 'user@estethis.com' });
+    const loginRes = await request(app)
+      .get(`/api/auth/verify-magic-link?token=${magicRes.body._demo_token}`);
+    const meRes = await request(app)
+      .get('/api/auth/me')
+      .set('X-Session-Token', loginRes.body.token);
+    expect(meRes.body.authMethod).toBe('magic-link');
   });
 });

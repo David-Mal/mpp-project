@@ -4,7 +4,7 @@
 // All repository calls are async (SQLite-backed).
 // ─────────────────────────────────────────────────────────────
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import http       from 'node:http';
 import { WebSocket } from 'ws';
 import request    from 'supertest';
@@ -15,10 +15,24 @@ import * as gen    from './generator.js';
 import { fakeProduct } from './generator.js';
 import { events, EVENTS } from './events.js';
 import { attach as attachRealtime } from './realtime.js';
+import authSeed from './authSeed.js';
+import { authLimiter } from './rateLimit.js';
+
+// Tokens for routes that require auth / write permissions
+let adminToken;
+
+beforeAll(async () => {
+  await authSeed();
+  const res = await request(app)
+    .post('/api/auth/login')
+    .send({ email: 'admin@estethis.com', password: 'admin123' });
+  adminToken = res.body.token;
+});
 
 beforeEach(async () => {
   await repository.clear();
   gen.reset();
+  authLimiter._reset();
 });
 
 afterEach(() => {
@@ -102,7 +116,9 @@ describe('generator › state machine', () => {
 // ─────────────────────────────────────────────────────────────
 describe('REST › /api/products/generator', () => {
   it('GET returns current status', async () => {
-    const res = await request(app).get('/api/products/generator');
+    const res = await request(app)
+      .get('/api/products/generator')
+      .set('X-Session-Token', adminToken);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('running', false);
     expect(res.body).toHaveProperty('intervalMs');
@@ -112,17 +128,21 @@ describe('REST › /api/products/generator', () => {
   it('POST /start then /stop toggles the loop', async () => {
     const start = await request(app)
       .post('/api/products/generator/start')
+      .set('X-Session-Token', adminToken)
       .send({ intervalMs: 5000, batchSize: 2 });
     expect(start.status).toBe(200);
     expect(start.body.running).toBe(true);
 
-    const stop = await request(app).post('/api/products/generator/stop');
+    const stop = await request(app)
+      .post('/api/products/generator/stop')
+      .set('X-Session-Token', adminToken);
     expect(stop.body.running).toBe(false);
   });
 
   it('POST /tick fires one batch immediately', async () => {
     const res = await request(app)
       .post('/api/products/generator/tick')
+      .set('X-Session-Token', adminToken)
       .send({ batchSize: 3 });
     expect(res.status).toBe(200);
     expect(res.body.generated).toBe(3);
@@ -132,6 +152,7 @@ describe('REST › /api/products/generator', () => {
   it('POST /start with bad params returns 400', async () => {
     const res = await request(app)
       .post('/api/products/generator/start')
+      .set('X-Session-Token', adminToken)
       .send({ intervalMs: 5 });
     expect(res.status).toBe(400);
   });
@@ -144,6 +165,7 @@ describe('REST › /api/products/sync', () => {
   it('replays a mixed batch and returns per-op outcomes', async () => {
     const seed = await request(app)
       .post('/api/products')
+      .set('X-Session-Token', adminToken)
       .send({ name: 'Original', price: 50, category: 'Tops', stock: 1, colors: ['White'], sizes: ['M'] });
     expect(seed.status).toBe(201);
     const seedId = seed.body.id;
@@ -158,7 +180,10 @@ describe('REST › /api/products/sync', () => {
       { op: 'delete', id: 999 },
     ];
 
-    const res = await request(app).post('/api/products/sync').send({ operations: ops });
+    const res = await request(app)
+      .post('/api/products/sync')
+      .set('X-Session-Token', adminToken)
+      .send({ operations: ops });
     expect(res.status).toBe(200);
     expect(res.body.results).toHaveLength(4);
 
@@ -174,13 +199,17 @@ describe('REST › /api/products/sync', () => {
   it('handles unknown ops gracefully', async () => {
     const res = await request(app)
       .post('/api/products/sync')
+      .set('X-Session-Token', adminToken)
       .send({ operations: [{ op: 'banana' }] });
     expect(res.status).toBe(200);
     expect(res.body.results[0].ok).toBe(false);
   });
 
   it('empty operations list returns zero results', async () => {
-    const res = await request(app).post('/api/products/sync').send({ operations: [] });
+    const res = await request(app)
+      .post('/api/products/sync')
+      .set('X-Session-Token', adminToken)
+      .send({ operations: [] });
     expect(res.status).toBe(200);
     expect(res.body.applied).toBe(0);
     expect(res.body.failed).toBe(0);
@@ -241,6 +270,7 @@ describe('WebSocket broadcaster', () => {
 
     await request(app)
       .post('/api/products')
+      .set('X-Session-Token', adminToken)
       .send({ name: 'Broadcast Tee', price: 10, category: 'Tops', stock: 1, colors: ['X'], sizes: ['M'] });
 
     await new Promise((r) => setTimeout(r, 120));

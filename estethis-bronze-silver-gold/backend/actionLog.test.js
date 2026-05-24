@@ -10,17 +10,18 @@ import { Op } from 'sequelize';
 import app from './app.js';
 import { ActionLog, User } from './models/index.js';
 import authSeed from './authSeed.js';
+import { authLimiter } from './rateLimit.js';
 
-const SEEDED_EMAILS = ['admin@estethis.com', 'user@estethis.com'];
+const SEEDED_EMAILS = ['admin@estethis.com', 'manager@estethis.com', 'user@estethis.com'];
 
 beforeAll(async () => {
   await authSeed();
 });
 
 beforeEach(async () => {
-  // Clear logs and non-seeded users between tests.
   await ActionLog.destroy({ where: {} });
   await User.destroy({ where: { email: { [Op.notIn]: SEEDED_EMAILS } } });
+  authLimiter._reset(); // prevent rate-limit bleed between tests
 });
 
 // ── Helpers ───────────────────────────────────────────────────

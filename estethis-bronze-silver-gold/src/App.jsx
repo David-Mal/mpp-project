@@ -20,8 +20,9 @@ import { createOfflineQueue }   from './data/offlineQueue';
 import { useConnection }        from './hooks/useConnection';
 import { useInfiniteProducts }  from './hooks/useInfiniteProducts';
 
-import LoginPage        from './components/LoginPage';
-import RegisterPage     from './components/RegisterPage';
+import LoginPage           from './components/LoginPage';
+import RegisterPage        from './components/RegisterPage';
+import ForgotPasswordPage  from './components/ForgotPasswordPage';
 import UsersView           from './components/UsersView';
 import ObservationListView from './components/ObservationListView';
 import ActionLogsView      from './components/ActionLogsView';
@@ -286,13 +287,19 @@ export default function App() {
   const selected = selectedId != null ? getProduct(allProducts, selectedId) : null;
 
   // ── Auth screens ─────────────────────────────────────────────
-  if (authStage === 'init')     return <div className="auth-page page-enter"><div className="auth-left"><div className="auth-left-content"><p style={{color:'#aaa',marginTop:'4rem'}}>Restoring session…</p></div></div></div>;
-  if (authStage === 'login')    return <LoginPage    onLogin={handleLogin}     onRegister={() => setAuthStage('register')} />;
-  if (authStage === 'register') return <RegisterPage onRegister={handleLogin}  onLogin={() => setAuthStage('login')} />;
+  if (authStage === 'init')
+    return <div className="auth-page page-enter"><div className="auth-left"><div className="auth-left-content"><p style={{color:'#aaa',marginTop:'4rem'}}>Restoring session…</p></div></div></div>;
+  if (authStage === 'login')
+    return <LoginPage onLogin={handleLogin} onRegister={() => setAuthStage('register')} onForgotPassword={() => setAuthStage('forgot-password')} />;
+  if (authStage === 'register')
+    return <RegisterPage onRegister={handleLogin} onLogin={() => setAuthStage('login')} />;
+  if (authStage === 'forgot-password')
+    return <ForgotPasswordPage onBack={() => setAuthStage('login')} />;
 
   // Permission helpers derived from the current user's role
-  const canWrite  = currentUser?.permissions?.includes('products:write')  ?? false;
-  const isAdmin   = currentUser?.role === 'admin';
+  const canWrite    = currentUser?.permissions?.includes('products:write')    ?? false;
+  const canGenerate = currentUser?.permissions?.includes('generator:manage')  ?? false;
+  const isAdmin     = currentUser?.role === 'admin';
 
   // ── Authenticated app ────────────────────────────────────────
   return (
@@ -334,7 +341,7 @@ export default function App() {
             currentUser={currentUser}
             sideCharts={<LiveCharts products={infProducts.items} />}
           />
-          {isAdmin && <GeneratorPanel realtime={realtime} online={online} />}
+          {canGenerate && <GeneratorPanel realtime={realtime} online={online} />}
         </>
       )}
 

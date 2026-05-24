@@ -31,10 +31,12 @@ describe('createSession / getSession', () => {
     expect(token.length).toBeGreaterThan(0);
   });
 
-  it('getSession returns the stored payload', () => {
+  it('getSession returns the stored payload (plus authMethod)', () => {
     const payload = { id: 42, email: 'test@x.com', role: 'admin' };
-    const token = createSession(payload);
-    expect(getSession(token)).toEqual(payload);
+    const token = createSession(payload, 'password');
+    // getSession injects authMethod into the returned object
+    expect(getSession(token)).toMatchObject(payload);
+    expect(getSession(token)?.authMethod).toBe('password');
   });
 
   it('getSession returns null for unknown token', () => {

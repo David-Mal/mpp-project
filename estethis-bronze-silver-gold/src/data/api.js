@@ -139,9 +139,9 @@ export async function apiHealth() {
   } catch { return false; }
 }
 
-// ── AUTH ─────────────────────────────────────────────────────
+// ── AUTH — Method 1: Password ─────────────────────────────────
 
-/** Login and store the session token. Returns { token, user }. */
+/** Login with email + password. Stores session token. Returns { token, user }. */
 export async function apiLogin(email, password) {
   const data = await apiFetch(`${AUTH_BASE}/login`, {
     method: 'POST',
@@ -151,7 +151,7 @@ export async function apiLogin(email, password) {
   return data;
 }
 
-/** Register and store the session token. Returns { token, user }. */
+/** Register a new account. Stores session token. Returns { token, user }. */
 export async function apiRegister(email, phone, password) {
   const data = await apiFetch(`${AUTH_BASE}/register`, {
     method: 'POST',
@@ -160,6 +160,81 @@ export async function apiRegister(email, phone, password) {
   setStoredToken(data.token);
   return data;
 }
+
+// ── AUTH — Method 2: OTP ──────────────────────────────────────
+
+/**
+ * Request a one-time code for the given email or phone number.
+ * Returns { message, _demo_otp, expiresInSeconds }.
+ */
+export async function apiRequestOtp(identifier) {
+  return apiFetch(`${AUTH_BASE}/request-otp`, {
+    method: 'POST',
+    body: JSON.stringify({ identifier }),
+  });
+}
+
+/**
+ * Complete OTP login with the 6-digit code.
+ * Stores session token. Returns { token, user }.
+ */
+export async function apiLoginWithOtp(identifier, code) {
+  const data = await apiFetch(`${AUTH_BASE}/login-otp`, {
+    method: 'POST',
+    body: JSON.stringify({ identifier, code }),
+  });
+  setStoredToken(data.token);
+  return data;
+}
+
+// ── AUTH — Method 3: Magic Link ───────────────────────────────
+
+/**
+ * Request a magic-link for the given email.
+ * Returns { message, _demo_token, expiresInSeconds }.
+ */
+export async function apiRequestMagicLink(email) {
+  return apiFetch(`${AUTH_BASE}/request-magic-link`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Verify a magic-link token and start a session.
+ * Stores session token. Returns { token, user }.
+ */
+export async function apiVerifyMagicLink(token) {
+  const data = await apiFetch(`${AUTH_BASE}/verify-magic-link?token=${encodeURIComponent(token)}`);
+  setStoredToken(data.token);
+  return data;
+}
+
+// ── AUTH — Password Recovery ──────────────────────────────────
+
+/**
+ * Request a password-reset token for the given email.
+ * Returns { message, _demo_token, expiresInSeconds }.
+ */
+export async function apiForgotPassword(email) {
+  return apiFetch(`${AUTH_BASE}/forgot-password`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+/**
+ * Reset the password using a valid reset token.
+ * Returns { message }.
+ */
+export async function apiResetPassword(token, newPassword) {
+  return apiFetch(`${AUTH_BASE}/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
+// ── AUTH — Session ────────────────────────────────────────────
 
 /** Logout — clears server session and local token. */
 export async function apiLogout() {
