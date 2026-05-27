@@ -37,6 +37,10 @@ const CERT_FILE = path.join(CERT_DIR, 'server.cert');
 const KEY_FILE  = path.join(CERT_DIR, 'server.key');
 
 function loadTlsOptions() {
+  // Cloud platforms (Render, Railway, Fly.io, etc.) terminate TLS at the
+  // load-balancer level — the Node process must run plain HTTP on the
+  // dynamic PORT they assign.  Skip certs entirely in production.
+  if (process.env.NODE_ENV === 'production') return null;
   try {
     return {
       cert: fs.readFileSync(CERT_FILE),
