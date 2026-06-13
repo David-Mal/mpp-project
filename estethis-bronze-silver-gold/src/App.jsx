@@ -260,7 +260,7 @@ export default function App() {
 
   const handleClearCart = useCallback(() => setCartItems([]), []);
 
-  const handlePlaceOrder = useCallback((shippingAddress) => {
+  const handlePlaceOrder = useCallback(({ shippingAddress, appliedCouponId = null, discount = 0 }) => {
     const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
     const shipping = subtotal > 0 ? 9.99 : 0;
     const order = {
@@ -277,16 +277,21 @@ export default function App() {
       })),
       subtotal,
       shipping,
-      total:     subtotal + shipping,
+      discount,
+      total:     Math.max(0, subtotal + shipping - discount),
       shippingAddress,
       status:    'confirmed',
       createdAt: new Date().toISOString(),
     };
     setOrders(prev => [order, ...prev]);
     setLastOrder(order);
+    // Mark the applied coupon as used so it can't be redeemed again
+    if (appliedCouponId) {
+      setCoupons(prev => prev.map(c => c.id === appliedCouponId ? { ...c, used: true } : c));
+    }
     handleClearCart();
     navigate('thankyou');
-  }, [cartItems, currentUser, handleClearCart, notify, navigate]);
+  }, [cartItems, currentUser, handleClearCart, navigate, setCoupons]);
 
   // ── Infinite products (Gold) ─────────────────────────────────
   const [search, setSearch] = useState('');
@@ -584,6 +589,8 @@ export default function App() {
           items={cartItems}
           onBack={() => navigate('master')}
           onPlaceOrder={handlePlaceOrder}
+          coupons={coupons}
+          currentUser={currentUser}
         />
       )}
 

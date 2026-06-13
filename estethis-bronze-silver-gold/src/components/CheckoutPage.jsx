@@ -54,11 +54,32 @@ function Field({ id, label, error, className = "", children }) {
   );
 }
 
+// ── Coupon helpers ────────────────────────────────────────────
+function computeDiscount(coupon, subtotal, items) {
+  if (!coupon) return 0;
+  switch (coupon.type) {
+    case "PERCENTAGE": {
+      const pct = parseFloat(coupon.value) / 100;
+      return Math.round(subtotal * pct * 100) / 100;
+    }
+    case "FIXED": {
+      const amount = parseFloat(coupon.value.replace(/[^0-9.]/g, ""));
+      return Math.min(amount, subtotal);
+    }
+    case "BOGO": {
+      // Cheapest single unit is free
+      const prices = items.flatMap(i => Array(i.quantity).fill(i.product.price));
+      return prices.length > 0 ? Math.min(...prices) : 0;
+    }
+    default:
+      return 0;
+  }
+}
+
 // ── Main component ────────────────────────────────────────────
-export default function CheckoutPage({ items, onBack, onPlaceOrder }) {
+export default function CheckoutPage({ items, onBack, onPlaceOrder, coupons = [], currentUser = null }) {
   const subtotal = items.reduce((s, i) => s + i.product.price * i.quantity, 0);
   const shipping = subtotal > 0 ? 9.99 : 0;
-  const total    = subtotal + shipping;
 
   const [form, setForm] = useState({
     firstName: "", lastName: "", email: "",
@@ -67,6 +88,45 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder }) {
   });
   const [errors,     setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
+
+  // ── Coupon state ──────────────────────────────────────────
+  const [couponInput,   setCouponInput]   = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponMsg,     setCouponMsg]     = useState({ text: "", ok: false });
+
+  const discount = computeDiscount(appliedCoupon, subtotal, items);
+  const total    = Math.max(0, subtotal + shipping - discount);
+
+  const handleApplyCoupon = () => {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+
+    const found = coupons.find(c => (c.code ?? "").toUpperCase() === code);
+    if (!found) {
+      setCouponMsg({ text: "Coupon code not found.", ok: false });
+      return;
+    }
+    if (found.userId !== currentUser?.id) {
+      setCouponMsg({ text: "This coupon doesn't belong to your account.", ok: false });
+      return;
+    }
+    if (found.used) {
+      setCouponMsg({ text: "This coupon has already been used.", ok: false });
+      return;
+    }
+    if (found.expiresAt && new Date(found.expiresAt) < new Date()) {
+      setCouponMsg({ text: "This coupon has expired.", ok: false });
+      return;
+    }
+    setAppliedCoupon(found);
+    setCouponMsg({ text: `✓ "${found.label}" applied!`, ok: true });
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+    setCouponMsg({ text: "", ok: false });
+  };
 
   const set = field => e => {
     let v = e.target.value;
@@ -86,13 +146,17 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder }) {
     await new Promise(r => setTimeout(r, 1600)); // Simulate processing
 
     onPlaceOrder({
-      firstName: form.firstName,
-      lastName:  form.lastName,
-      email:     form.email,
-      address:   form.address,
-      city:      form.city,
-      country:   form.country,
-      zip:       form.zip,
+      shippingAddress: {
+        firstName: form.firstName,
+        lastName:  form.lastName,
+        email:     form.email,
+        address:   form.address,
+        city:      form.city,
+        country:   form.country,
+        zip:       form.zip,
+      },
+      appliedCouponId: appliedCoupon?.id ?? null,
+      discount,
     });
   };
 
@@ -182,7 +246,9 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder }) {
               </div>
 
               <button type="submit" className="checkout-submit-btn" disabled={submitting}>
-                {submitting ? "PROCESSING…" : `PLACE ORDER — $${total.toFixed(2)}`}
+                {submitting ? "PROCESSING…" : discount > 0
+                  ? `PLACE ORDER — $${total.toFixed(2)} (save $${discount.toFixed(2)})`
+                  : `PLACE ORDER — $${total.toFixed(2)}`}
               </button>
               <p className="secure-notice">🔒 &nbsp;Simulated checkout — no real payment will be processed</p>
             </div>
@@ -217,11 +283,52 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder }) {
 
             <hr className="checkout-summary__divider" />
 
+            {/* Coupon section */}
+            <div className="checkout-coupon">
+              <p className="checkout-coupon__title">PROMO CODE</p>
+              {appliedCoupon ? (
+                <div className="checkout-coupon__applied">
+                  <span className="checkout-coupon__applied-label">
+                    ✦ {appliedCoupon.label}
+                  </span>
+                  <button className="checkout-coupon__remove" onClick={handleRemoveCoupon}>
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div className="checkout-coupon__row">
+                  <input
+                    className="checkout-coupon__input"
+                    placeholder="Enter code…"
+                    value={couponInput}
+                    onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponMsg({ text: "", ok: false }); }}
+                    onKeyDown={e => e.key === "Enter" && handleApplyCoupon()}
+                  />
+                  <button className="checkout-coupon__btn" onClick={handleApplyCoupon}>
+                    APPLY
+                  </button>
+                </div>
+              )}
+              {couponMsg.text && (
+                <p className={`checkout-coupon__msg${couponMsg.ok ? " checkout-coupon__msg--ok" : " checkout-coupon__msg--err"}`}>
+                  {couponMsg.text}
+                </p>
+              )}
+            </div>
+
+            <hr className="checkout-summary__divider" />
+
             <div className="checkout-summary__totals">
               <div className="checkout-summary__line">
                 <span>SUBTOTAL</span>
                 <span>${subtotal.toFixed(2)}</span>
               </div>
+              {discount > 0 && (
+                <div className="checkout-summary__line checkout-summary__line--discount">
+                  <span>DISCOUNT</span>
+                  <span>−${discount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="checkout-summary__line">
                 <span>SHIPPING</span>
                 <span>{shipping === 0 ? "FREE" : `$${shipping.toFixed(2)}`}</span>

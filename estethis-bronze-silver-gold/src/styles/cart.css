@@ -409,6 +409,86 @@
   font-family: 'Playfair Display', serif;
   font-size: 20px;
 }
+.checkout-summary__line--discount {
+  color: #6aac8a;
+}
+.checkout-summary__line--discount span:last-child {
+  color: #6aac8a;
+  font-weight: 600;
+}
+
+/* ══════════════════════════════════════════════════
+   CHECKOUT — COUPON / PROMO CODE SECTION
+══════════════════════════════════════════════════ */
+.checkout-coupon {
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(201,168,76,0.1);
+}
+.checkout-coupon__title {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.24em;
+  color: rgba(201,168,76,0.5);
+  margin-bottom: 10px;
+}
+.checkout-coupon__row {
+  display: flex; gap: 8px;
+}
+.checkout-coupon__input {
+  flex: 1;
+  padding: 9px 12px;
+  background: rgba(240,235,224,0.04);
+  border: 1px solid rgba(201,168,76,0.2);
+  color: #f0ebe0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; letter-spacing: 0.1em;
+  outline: none;
+  transition: border-color 0.2s;
+  text-transform: uppercase;
+}
+.checkout-coupon__input::placeholder { color: rgba(240,235,224,0.2); text-transform: none; }
+.checkout-coupon__input:focus { border-color: rgba(201,168,76,0.55); }
+.checkout-coupon__btn {
+  padding: 9px 14px;
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.4);
+  color: #c9a84c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.2em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.checkout-coupon__btn:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: rgba(201,168,76,0.7);
+}
+.checkout-coupon__msg {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.08em;
+  margin-top: 7px;
+}
+.checkout-coupon__msg--ok  { color: #6aac8a; }
+.checkout-coupon__msg--err { color: #c05050; }
+.checkout-coupon__applied {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  border: 1px solid rgba(106,172,138,0.4);
+  background: rgba(106,172,138,0.06);
+}
+.checkout-coupon__applied-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; letter-spacing: 0.1em;
+  color: #6aac8a;
+}
+.checkout-coupon__remove {
+  background: transparent; border: none;
+  color: rgba(240,235,224,0.3);
+  font-size: 13px; cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+.checkout-coupon__remove:hover { color: #c05050; }
 
 /* Responsive */
 @media (max-width: 900px) {

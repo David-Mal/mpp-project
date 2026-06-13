@@ -69,6 +69,14 @@ function OrderCard({ order }) {
             <span className="order-card__breakdown-label">SUBTOTAL</span>
             <span className="order-card__breakdown-value">${(order.subtotal ?? 0).toFixed(2)}</span>
           </div>
+          {(order.discount ?? 0) > 0 && (
+            <div className="order-card__breakdown-item">
+              <span className="order-card__breakdown-label">DISCOUNT</span>
+              <span className="order-card__breakdown-value" style={{ color: "#6aac8a" }}>
+                −${(order.discount).toFixed(2)}
+              </span>
+            </div>
+          )}
           <div className="order-card__breakdown-item">
             <span className="order-card__breakdown-label">SHIPPING</span>
             <span className="order-card__breakdown-value">
