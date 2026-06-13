@@ -347,6 +347,8 @@
 .checkout-summary {
   position: sticky;
   top: 40px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   border: 1px solid rgba(201,168,76,0.18);
   background: rgba(255,255,255,0.02);
 }

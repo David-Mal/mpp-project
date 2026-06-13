@@ -258,32 +258,7 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder, coupons = []
           <aside className="checkout-summary">
             <div className="checkout-summary__header">ORDER SUMMARY</div>
 
-            <div className="checkout-summary__items">
-              {items.map(item => (
-                <div key={item.product.id} className="checkout-summary__item">
-                  <img
-                    src={item.product.image}
-                    alt={item.product.name}
-                    className="checkout-summary__item-img"
-                    onError={e => { e.target.style.display = "none"; }}
-                  />
-                  <div className="checkout-summary__item-info" style={{ flex: 1, minWidth: 0 }}>
-                    <p className="checkout-summary__item-name">{item.product.name}</p>
-                    <p className="checkout-summary__item-qty">
-                      {[item.selectedColor, item.selectedSize].filter(Boolean).join(" · ")}
-                      {item.quantity > 1 && ` × ${item.quantity}`}
-                    </p>
-                  </div>
-                  <span className="checkout-summary__item-price">
-                    ${(item.product.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <hr className="checkout-summary__divider" />
-
-            {/* Coupon section */}
+            {/* Coupon section — at the top so it's always visible */}
             <div className="checkout-coupon">
               <p className="checkout-coupon__title">PROMO CODE</p>
               {appliedCoupon ? (
@@ -314,6 +289,31 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder, coupons = []
                   {couponMsg.text}
                 </p>
               )}
+            </div>
+
+            <hr className="checkout-summary__divider" />
+
+            <div className="checkout-summary__items">
+              {items.map(item => (
+                <div key={item.product.id} className="checkout-summary__item">
+                  <img
+                    src={item.product.image}
+                    alt={item.product.name}
+                    className="checkout-summary__item-img"
+                    onError={e => { e.target.style.display = "none"; }}
+                  />
+                  <div className="checkout-summary__item-info" style={{ flex: 1, minWidth: 0 }}>
+                    <p className="checkout-summary__item-name">{item.product.name}</p>
+                    <p className="checkout-summary__item-qty">
+                      {[item.selectedColor, item.selectedSize].filter(Boolean).join(" · ")}
+                      {item.quantity > 1 && ` × ${item.quantity}`}
+                    </p>
+                  </div>
+                  <span className="checkout-summary__item-price">
+                    ${(item.product.price * item.quantity).toFixed(2)}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <hr className="checkout-summary__divider" />
