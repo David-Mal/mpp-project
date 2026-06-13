@@ -60,7 +60,10 @@ export function useInfiniteProducts({ fetchFn, search = '', sort = '', enabled =
       setTotal(newTotal);
       setHasMore(targetPage < totalPages);
     } catch (err) {
-      if (reqId === reqIdRef.current) setError(err);
+      if (reqId === reqIdRef.current) {
+        setError(err);
+        setHasMore(false); // stop the observer from retrying on a failed fetch
+      }
     } finally {
       if (reqId === reqIdRef.current) setLoading(false);
     }

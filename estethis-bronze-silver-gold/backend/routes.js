@@ -37,8 +37,10 @@ router.post('/generator/tick',  ...canGenerate, async (req, res) => {
 });
 
 // ── Bronze CRUD ────────────────────────────────────────────────
-router.get   ('/',     requireAuth,   controller.getAll);
-router.get   ('/:id',  requireAuth,   controller.getById);
+// Read routes are public — guests and unauthenticated browsers can
+// browse the catalogue without logging in. Writes still require auth.
+router.get   ('/',     controller.getAll);
+router.get   ('/:id',  controller.getById);
 router.post  ('/',     ...canWrite,   validateProduct, controller.create);
 router.put   ('/:id',  ...canWrite,   validateProduct, controller.update);
 router.delete('/:id',  ...canWrite,   controller.delete);
