@@ -223,6 +223,45 @@
   letter-spacing: 0.18em; font-weight: 400; text-align: center;
 }
 .master__body { margin: 28px 40px; }
+
+/* ── Personalisation banner (Phase 5) ─────────────────────── */
+.personalization-banner {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  margin: 14px 40px 0;
+  padding: 10px 16px;
+  background: rgba(201,168,76,0.06);
+  border: 1px solid rgba(201,168,76,0.18);
+  border-radius: 2px;
+}
+.personalization-banner__label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: rgba(201,168,76,0.7); text-transform: uppercase;
+  white-space: nowrap;
+}
+.personalization-banner__cats {
+  display: flex; gap: 8px; flex-wrap: wrap; flex: 1;
+}
+.personalization-banner__chip {
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.3);
+  color: #c9a84c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; border-radius: 1px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.personalization-banner__chip:hover {
+  background: rgba(201,168,76,0.12); border-color: rgba(201,168,76,0.6);
+}
+.personalization-banner__dismiss {
+  background: transparent; border: none;
+  color: rgba(240,235,224,0.3); font-size: 11px;
+  cursor: pointer; padding: 2px 4px; margin-left: auto;
+  transition: color 0.2s;
+}
+.personalization-banner__dismiss:hover { color: rgba(240,235,224,0.7); }
 .table-wrap { border: 1px solid rgba(201,168,76,0.25); border-radius: 2px; }
 .table-head {
   display: grid;
@@ -524,6 +563,7 @@
   /* Master */
   .master__header { padding: 20px 20px 0; }
   .master__body   { margin: 20px 20px; }
+  .personalization-banner { margin: 10px 20px 0; }
   .table-head { grid-template-columns: 44px 1fr 90px 80px 72px; }
   .table-row  { grid-template-columns: 44px 1fr 90px 80px 72px; }
 
@@ -1306,3 +1346,123 @@
   color: rgba(240,235,224,0.4);
   letter-spacing: 0.08em;
 }
+
+/* ══════════════════════════════════════════════════
+   GUEST AUTH MODAL (Phase 6)
+══════════════════════════════════════════════════ */
+.guest-modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.72);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeInOverlay 0.2s ease;
+}
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.guest-modal {
+  position: relative;
+  width: min(420px, 90vw);
+  background: #111;
+  border: 1px solid rgba(201,168,76,0.3);
+  padding: 40px 36px 32px;
+  text-align: center;
+  animation: slideUpModal 0.25s cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes slideUpModal {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.guest-modal__close {
+  position: absolute; top: 14px; right: 16px;
+  background: transparent; border: none;
+  color: rgba(240,235,224,0.35); font-size: 13px;
+  cursor: pointer; transition: color 0.2s; line-height: 1;
+}
+.guest-modal__close:hover { color: rgba(240,235,224,0.8); }
+.guest-modal__ornament {
+  font-size: 22px; color: #c9a84c;
+  margin-bottom: 12px; letter-spacing: 0.05em;
+}
+.guest-modal__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 400;
+  color: #f0ebe0; letter-spacing: 0.06em;
+  margin: 0 0 4px;
+}
+.guest-modal__text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; color: rgba(240,235,224,0.55);
+  line-height: 1.7; letter-spacing: 0.03em;
+  margin: 0 0 24px;
+}
+.guest-modal__actions {
+  display: flex; flex-direction: column; gap: 10px;
+  margin-bottom: 18px;
+}
+.guest-modal__btn {
+  width: 100%; padding: 13px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; letter-spacing: 0.18em;
+  cursor: pointer; border-radius: 1px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.guest-modal__btn--primary {
+  background: #c9a84c; border: 1px solid #c9a84c; color: #0c0c0c;
+}
+.guest-modal__btn--primary:hover {
+  background: #d9b86c; border-color: #d9b86c;
+}
+.guest-modal__btn--secondary {
+  background: transparent;
+  border: 1px solid rgba(201,168,76,0.4); color: #c9a84c;
+}
+.guest-modal__btn--secondary:hover {
+  background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.7);
+}
+.guest-modal__dismiss {
+  background: transparent; border: none;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: rgba(240,235,224,0.3); cursor: pointer;
+  text-decoration: underline; text-underline-offset: 3px;
+  transition: color 0.2s;
+}
+.guest-modal__dismiss:hover { color: rgba(240,235,224,0.6); }
+
+/* Guest-mode sign-in button in header */
+.guest-signin-btn {
+  padding: 7px 16px;
+  background: #c9a84c; border: 1px solid #c9a84c;
+  color: #0c0c0c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.14em;
+  cursor: pointer; border-radius: 1px;
+  transition: background 0.2s;
+}
+.guest-signin-btn:hover { background: #d9b86c; }
+.guest-register-btn {
+  padding: 7px 14px;
+  background: transparent; border: 1px solid rgba(201,168,76,0.4);
+  color: #c9a84c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.14em;
+  cursor: pointer; border-radius: 1px;
+  transition: background 0.2s, border-color 0.2s;
+}
+.guest-register-btn:hover {
+  background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.7);
+}
+
+/* "Browse as Guest" link on LoginPage */
+.auth-guest-link {
+  display: block; margin-top: 20px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.12em;
+  color: rgba(240,235,224,0.3);
+  cursor: pointer; text-align: center;
+  text-decoration: underline; text-underline-offset: 3px;
+  background: transparent; border: none;
+  transition: color 0.2s;
+}
+.auth-guest-link:hover { color: rgba(240,235,224,0.6); }

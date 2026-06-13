@@ -219,7 +219,7 @@ function MagicLinkForm({ onLogin }) {
 }
 
 // ── Main component ────────────────────────────────────────────
-export default function LoginPage({ onLogin, onRegister, onForgotPassword }) {
+export default function LoginPage({ onLogin, onRegister, onForgotPassword, onGuest }) {
   const [tab, setTab] = useState(0);
 
   return (
@@ -262,6 +262,12 @@ export default function LoginPage({ onLogin, onRegister, onForgotPassword }) {
                 REGISTER NOW
               </button>
             </p>
+
+            {onGuest && (
+              <button className="auth-guest-link" onClick={onGuest}>
+                BROWSE WITHOUT AN ACCOUNT
+              </button>
+            )}
           </div>
         </div>
       </div>

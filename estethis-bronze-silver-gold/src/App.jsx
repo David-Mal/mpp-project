@@ -19,6 +19,12 @@ import { createRealtimeClient } from './data/realtime';
 import { createOfflineQueue }   from './data/offlineQueue';
 import { useConnection }        from './hooks/useConnection';
 import { useInfiniteProducts }  from './hooks/useInfiniteProducts';
+import {
+  saveUserData, loadUserData,
+  saveGlobal, loadGlobal,
+  trackPageVisit, trackCategoryView, getRecentCategories,
+  clearActivityCookies,
+} from './data/storage';
 
 import LoginPage           from './components/LoginPage';
 import RegisterPage        from './components/RegisterPage';
@@ -41,6 +47,7 @@ import CheckoutPage        from './components/CheckoutPage';
 import OrderHistoryPage    from './components/OrderHistoryPage';
 import StaticPage          from './components/StaticPage';
 import TicketMachinePage   from './components/TicketMachinePage';
+import GuestAuthModal      from './components/GuestAuthModal';
 import { Toast }           from './components/Shared';
 
 import './data/tests';
@@ -71,29 +78,74 @@ export default function App() {
   const [toast,        setToast]        = useState(null);
   const [transKey,     setTransKey]     = useState(0);
 
-  // Restore session from localStorage on first render
+  // Restore session from localStorage on first render.
+  // On success, also reload the user-scoped cart so a page refresh
+  // doesn't wipe items the user had added before the refresh.
   useEffect(() => {
     if (authStage !== 'init') return;
     apiMe().then(user => {
-      if (user) { setCurrentUser(user); setAuthStage('app'); }
-      else       { setAuthStage('login'); }
+      if (user) {
+        setCurrentUser(user);
+        setCartItems(loadUserData(user.id, 'cart', []));
+        setAuthStage('app');
+      } else {
+        setAuthStage('login');
+      }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogin = useCallback((user) => {
     setCurrentUser(user);
+    // Restore this user's cart (scoped by userId, prevents cross-user leakage)
+    setCartItems(loadUserData(user.id, 'cart', []));
     setAuthStage('app');
   }, []);
 
+  // Use a ref so handleLogout can read the current cart without
+  // being recreated every time cartItems changes (avoids resetting
+  // the inactivity timer dependency chain).
+  const cartItemsRef    = useRef([]);
+  const currentUserRef  = useRef(null);
+
   const handleLogout = useCallback(async () => {
+    // Persist the current cart under the user-scoped key before clearing,
+    // so it can be restored the next time this user logs in.
+    if (currentUserRef.current?.id) {
+      saveUserData(currentUserRef.current.id, 'cart', cartItemsRef.current);
+    }
+    clearActivityCookies();
     await apiLogout();
     setCurrentUser(null);
     setAuthStage('login');
     setView('landing');
     setAllProducts([]);
     setCartItems([]);
-    localStorage.removeItem('estethis_cart');
+  }, []);
+
+  // ── Guest mode (Phase 6) ─────────────────────────────────────
+  // guestModalOpen: shows the intercept modal when a guest
+  // attempts a protected action (cart, checkout, account).
+  const [guestModalOpen, setGuestModalOpen] = useState(false);
+
+  const handleGuestBrowse = useCallback(() => {
+    setAuthStage('guest');
+    setView('master');
+  }, []);
+
+  const handleGuestSignIn = useCallback(() => {
+    setGuestModalOpen(false);
+    setAuthStage('login');
+  }, []);
+
+  const handleGuestRegister = useCallback(() => {
+    setGuestModalOpen(false);
+    setAuthStage('register');
+  }, []);
+
+  const handleGuestAction = useCallback(() => {
+    setGuestModalOpen(true);
+    return false; // signals callers that the action was blocked
   }, []);
 
   // ── Inactivity auto-logout (30 min, matches server SESSION_TIMEOUT_MS) ──
@@ -125,39 +177,54 @@ export default function App() {
     setTransKey(navKey);
     if (opts.id !== undefined) setSelectedId(opts.id);
     setView(nextView);
+    trackPageVisit(nextView);
   }, []);
 
-  // ── Cart state (Phase 2) ─────────────────────────────────────
-  const [cartItems, setCartItems] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('estethis_cart') || '[]'); } catch { return []; }
-  });
-  const [cartOpen, setCartOpen] = useState(false);
+  // ── Cart state (Phase 2 · scoped per-user in Phase 5) ────────
+  // Cart starts empty; the correct user's cart is loaded in
+  // handleLogin and in the apiMe() session-restore handler above.
+  const [cartItems, setCartItems] = useState([]);
+  const [cartOpen,  setCartOpen]  = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('estethis_cart', JSON.stringify(cartItems));
-  }, [cartItems]);
+  // Keep ref in sync so handleLogout can read the latest cart
+  // without needing cartItems in its dependency array.
+  useEffect(() => { cartItemsRef.current   = cartItems; }, [cartItems]);
+  useEffect(() => { currentUserRef.current = currentUser; }, [currentUser]);
 
-  // Orders — persisted per-session (Phase 3 reads these for history)
-  const [orders, setOrders] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('estethis_orders') || '[]'); } catch { return []; }
-  });
+  // Persist cart to the user-scoped key on every change.
   useEffect(() => {
-    localStorage.setItem('estethis_orders', JSON.stringify(orders));
-  }, [orders]);
+    if (currentUser?.id) saveUserData(currentUser.id, 'cart', cartItems);
+  }, [cartItems, currentUser]);
+
+  // ── Orders ────────────────────────────────────────────────────
+  // Stored in a global key but tagged with userId; the Order History
+  // page filters by currentUser.id, preventing cross-user leakage.
+  const [orders, setOrders] = useState(() => loadGlobal('orders', []));
+  useEffect(() => { saveGlobal('orders', orders); }, [orders]);
 
   // Last placed order — handed to the Ticket Machine (Phase 4)
   const [lastOrder, setLastOrder] = useState(null);
 
-  // Coupons won via Ticket Machine — persisted
-  const [coupons, setCoupons] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('estethis_coupons') || '[]'); } catch { return []; }
-  });
-  useEffect(() => {
-    localStorage.setItem('estethis_coupons', JSON.stringify(coupons));
-  }, [coupons]);
+  // ── Coupons ───────────────────────────────────────────────────
+  // Also global + userId-tagged; filtered at display time.
+  const [coupons, setCoupons] = useState(() => loadGlobal('coupons', []));
+  useEffect(() => { saveGlobal('coupons', coupons); }, [coupons]);
 
   const handleSaveCoupon = useCallback((coupon) => {
     setCoupons(prev => [coupon, ...prev]);
+  }, []);
+
+  // ── Contact messages (Phase 7) ────────────────────────────────
+  // Submitted via the Contact page, read in the Admin Panel Inbox.
+  const [messages, setMessages] = useState(() => loadGlobal('messages', []));
+  useEffect(() => { saveGlobal('messages', messages); }, [messages]);
+
+  const handleSendMessage = useCallback((msg) => {
+    setMessages(prev => [msg, ...prev]);
+  }, []);
+
+  const handleMarkMessageRead = useCallback((msgId) => {
+    setMessages(prev => prev.map(m => m.id === msgId ? { ...m, read: true } : m));
   }, []);
 
   const cartItemCount = cartItems.reduce((s, i) => s + i.quantity, 0);
@@ -388,37 +455,53 @@ export default function App() {
   const selected = selectedId != null ? getProduct(allProducts, selectedId) : null;
 
   // ── Auth screens ─────────────────────────────────────────────
+  // NOTE: 'guest' stage does NOT early-return — it falls through
+  // to the main app render below with isGuest=true.
   if (authStage === 'init')
     return <div className="auth-page page-enter"><div className="auth-left"><div className="auth-left-content"><p style={{color:'#aaa',marginTop:'4rem'}}>Restoring session…</p></div></div></div>;
   if (authStage === 'login')
-    return <LoginPage onLogin={handleLogin} onRegister={() => setAuthStage('register')} onForgotPassword={() => setAuthStage('forgot-password')} />;
+    return <LoginPage onLogin={handleLogin} onRegister={() => setAuthStage('register')} onForgotPassword={() => setAuthStage('forgot-password')} onGuest={handleGuestBrowse} />;
   if (authStage === 'register')
     return <RegisterPage onRegister={handleLogin} onLogin={() => setAuthStage('login')} />;
   if (authStage === 'forgot-password')
     return <ForgotPasswordPage onBack={() => setAuthStage('login')} />;
 
-  // Permission helpers derived from the current user's role
-  const canWrite    = currentUser?.permissions?.includes('products:write')    ?? false;
-  const canGenerate = currentUser?.permissions?.includes('generator:manage')  ?? false;
-  const isAdmin     = currentUser?.role === 'admin';
+  // Permission helpers — guests get no write or admin access
+  const isGuest     = authStage === 'guest';
+  const canWrite    = isGuest ? false : (currentUser?.permissions?.includes('products:write')   ?? false);
+  const canGenerate = isGuest ? false : (currentUser?.permissions?.includes('generator:manage') ?? false);
+  const isAdmin     = isGuest ? false : currentUser?.role === 'admin';
 
-  // ── Authenticated app ────────────────────────────────────────
+  // ── Authenticated app (also serves guest browsing) ───────────
   return (
     <>
-      <OfflineBanner
-        browserOnline={browserOnline} wsConnected={wsConnected}
-        serverHealthy={serverHealthy} queueSize={queueSize} syncing={syncing}
+      {/* Guest intercept modal — shown when a guest attempts a protected action */}
+      <GuestAuthModal
+        isOpen={guestModalOpen}
+        onSignIn={handleGuestSignIn}
+        onRegister={handleGuestRegister}
+        onClose={() => setGuestModalOpen(false)}
       />
 
-      {/* Cart drawer — always in DOM for smooth slide transition */}
-      <CartDrawer
-        isOpen={cartOpen}
-        items={cartItems}
-        onClose={() => setCartOpen(false)}
-        onRemove={handleRemoveFromCart}
-        onUpdateQty={handleUpdateCartQty}
-        onCheckout={() => { setCartOpen(false); navigate('checkout'); }}
-      />
+      {/* Offline banner — hidden for guests (no auth, no sync) */}
+      {!isGuest && (
+        <OfflineBanner
+          browserOnline={browserOnline} wsConnected={wsConnected}
+          serverHealthy={serverHealthy} queueSize={queueSize} syncing={syncing}
+        />
+      )}
+
+      {/* Cart drawer — only for authenticated users */}
+      {!isGuest && (
+        <CartDrawer
+          isOpen={cartOpen}
+          items={cartItems}
+          onClose={() => setCartOpen(false)}
+          onRemove={handleRemoveFromCart}
+          onUpdateQty={handleUpdateCartQty}
+          onCheckout={() => { setCartOpen(false); navigate('checkout'); }}
+        />
+      )}
 
       {view === 'landing' && (
         <PresentationPage key={transKey} onEnter={() => navigate('master')} />
@@ -451,10 +534,14 @@ export default function App() {
             canWrite={canWrite}
             currentUser={currentUser}
             sideCharts={<LiveCharts products={infProducts.items} />}
-            onCartOpen={() => setCartOpen(true)}
+            onCartOpen={isGuest ? null : () => setCartOpen(true)}
             cartItemCount={cartItemCount}
-            onAccount={() => navigate('orderHistory')}
+            onAccount={isGuest ? null : () => navigate('orderHistory')}
             onNavigate={view => navigate(view)}
+            recentCategories={getRecentCategories()}
+            isGuest={isGuest}
+            onGuestSignIn={handleGuestSignIn}
+            onGuestRegister={handleGuestRegister}
           />
           {canGenerate && <GeneratorPanel realtime={realtime} online={online} />}
         </>
@@ -468,7 +555,8 @@ export default function App() {
           onEdit={id => navigate('edit', { id })}
           onDelete={handleDelete}
           onAtelier={canWrite ? () => navigate('atelier') : null}
-          onAddToCart={handleAddToCart}
+          onAddToCart={isGuest ? handleGuestAction : handleAddToCart}
+          onCategoryView={trackCategoryView}
           online={online}
           canWrite={canWrite}
         />
@@ -483,6 +571,10 @@ export default function App() {
           onEdit={handleEditFromStats}
           onDelete={handleDeleteFromStats}
           canWrite={canWrite}
+          isAdmin={isAdmin}
+          orders={orders}
+          messages={messages}
+          onMarkMessageRead={handleMarkMessageRead}
         />
       )}
 
@@ -509,6 +601,7 @@ export default function App() {
         <OrderHistoryPage
           key={transKey}
           orders={orders}
+          coupons={coupons}
           currentUser={currentUser}
           onBack={() => navigate('master')}
           onShop={() => navigate('master')}
@@ -521,6 +614,8 @@ export default function App() {
           type={view}
           onBack={() => navigate('master')}
           onNavigate={view => navigate(view)}
+          currentUser={currentUser}
+          onSendMessage={handleSendMessage}
         />
       )}
 

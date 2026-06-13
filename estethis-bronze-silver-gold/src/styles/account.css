@@ -458,3 +458,377 @@
   .orders-heading { font-size: 28px; }
   .order-card__header { grid-template-columns: 1fr auto; gap: 10px; flex-wrap: wrap; }
 }
+
+/* ══════════════════════════════════════════════════
+   ACCOUNT PAGE TABS (Phase 8)
+══════════════════════════════════════════════════ */
+.account-tabs {
+  display: flex; gap: 0; margin-bottom: 0;
+  border-bottom: 1px solid rgba(201,168,76,0.15);
+}
+.account-tab {
+  padding: 10px 22px;
+  background: transparent;
+  border: none; border-bottom: 2px solid transparent;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.18em;
+  color: rgba(240,235,224,0.35); cursor: pointer;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+  display: flex; align-items: center; gap: 7px;
+}
+.account-tab:hover { color: rgba(240,235,224,0.65); }
+.account-tab--active {
+  color: #c9a84c; border-bottom-color: #c9a84c;
+}
+.account-tab__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 17px; padding: 0 5px; border-radius: 9px;
+  background: rgba(255,255,255,0.08);
+  font-size: 9px; color: rgba(240,235,224,0.4);
+}
+.account-tab__badge--gold {
+  background: rgba(201,168,76,0.15);
+  color: #c9a84c;
+  border: 1px solid rgba(201,168,76,0.3);
+}
+
+/* ── Coupon cards ─────────────────────────────────────── */
+.coupons-list {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+.coupon-card {
+  position: relative; display: flex; align-items: stretch;
+  border: 1px solid rgba(201,168,76,0.3);
+  background: rgba(201,168,76,0.03);
+  overflow: hidden;
+  transition: border-color 0.2s, background 0.2s;
+}
+.coupon-card:hover { border-color: rgba(201,168,76,0.5); }
+.coupon-card--inactive {
+  border-color: rgba(255,255,255,0.06);
+  background: rgba(255,255,255,0.01);
+  opacity: 0.6;
+}
+
+/* Left accent strip with rotated type label */
+.coupon-card__type-strip {
+  flex-shrink: 0; width: 36px;
+  background: rgba(201,168,76,0.12);
+  border-right: 1px solid rgba(201,168,76,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 8px; letter-spacing: 0.14em; color: #c9a84c;
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  padding: 12px 0;
+}
+.coupon-card--inactive .coupon-card__type-strip {
+  background: rgba(255,255,255,0.04);
+  border-right-color: rgba(255,255,255,0.06);
+  color: rgba(240,235,224,0.2);
+}
+
+/* Decorative punch-out notches on left and right */
+.coupon-card__notch {
+  position: absolute; top: 50%; width: 14px; height: 14px;
+  background: #0c0c0c; border-radius: 50%;
+  transform: translateY(-50%);
+  border: 1px solid rgba(201,168,76,0.2);
+}
+.coupon-card__notch--left  { left: 28px;  border-left: none; }
+.coupon-card__notch--right { right: 148px; border-right: none; }
+
+.coupon-card__body {
+  flex: 1; padding: 16px 20px;
+}
+.coupon-card__label {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 400; color: #c9a84c;
+  margin: 0 0 4px;
+}
+.coupon-card__desc {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.5); letter-spacing: 0.04em;
+  margin: 0 0 8px;
+}
+.coupon-card__meta {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.1em; color: rgba(240,235,224,0.25);
+}
+
+/* Right panel: status + code + copy */
+.coupon-card__right {
+  flex-shrink: 0; width: 150px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 14px 16px;
+  border-left: 1px dashed rgba(201,168,76,0.2);
+}
+.coupon-card--inactive .coupon-card__right {
+  border-left-color: rgba(255,255,255,0.05);
+}
+
+.coupon-card__status {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 8px; letter-spacing: 0.2em;
+  padding: 3px 10px; border-radius: 1px; border-width: 1px; border-style: solid;
+}
+.coupon-card__status--available {
+  color: #6aac8a; border-color: rgba(106,172,138,0.4);
+  background: rgba(106,172,138,0.06);
+}
+.coupon-card__status--used {
+  color: rgba(240,235,224,0.25); border-color: rgba(255,255,255,0.08);
+}
+.coupon-card__status--expired {
+  color: rgba(224,108,117,0.6); border-color: rgba(224,108,117,0.2);
+}
+
+.coupon-card__code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
+  color: #f0ebe0; text-align: center;
+}
+.coupon-card--inactive .coupon-card__code { color: rgba(240,235,224,0.25); }
+
+.coupon-card__copy {
+  padding: 5px 12px;
+  background: transparent; border: 1px solid rgba(201,168,76,0.3);
+  color: #c9a84c; font-family: 'Montserrat', sans-serif;
+  font-size: 8px; letter-spacing: 0.14em; cursor: pointer;
+  border-radius: 1px; transition: background 0.2s, border-color 0.2s;
+}
+.coupon-card__copy:hover {
+  background: rgba(201,168,76,0.1); border-color: rgba(201,168,76,0.6);
+}
+
+/* ══════════════════════════════════════════════════
+   ADMIN PANEL — Orders & Inbox tabs (Phase 7)
+══════════════════════════════════════════════════ */
+
+/* Top-nav badge */
+.stats-topnav__badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 18px; height: 18px; padding: 0 5px;
+  background: rgba(201,168,76,0.15);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: #c9a84c;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.05em; border-radius: 9px;
+  margin-left: 5px; vertical-align: middle;
+}
+.stats-topnav__badge--alert {
+  background: rgba(224,108,117,0.15);
+  border-color: rgba(224,108,117,0.4);
+  color: #e06c75;
+}
+
+/* Shared tab body */
+.admin-tab-body { padding: 28px 32px; }
+.admin-tab-header {
+  display: flex; align-items: baseline; gap: 14px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(201,168,76,0.12);
+}
+.admin-tab-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 400; color: #f0ebe0; letter-spacing: 0.08em;
+  margin: 0;
+}
+.admin-tab-count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; letter-spacing: 0.1em; color: rgba(240,235,224,0.35);
+}
+.admin-tab-unread { color: #e06c75; }
+
+/* Empty state */
+.admin-empty-state {
+  text-align: center; padding: 60px 20px;
+}
+.admin-empty-state__icon {
+  font-size: 36px; color: rgba(201,168,76,0.2);
+  margin: 0 0 12px;
+}
+.admin-empty-state__text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; letter-spacing: 0.08em; color: rgba(240,235,224,0.3);
+}
+
+/* ── Order cards ─────────────────────────────────────── */
+.admin-order-list { display: flex; flex-direction: column; gap: 8px; }
+
+.admin-order-card {
+  border: 1px solid rgba(201,168,76,0.15);
+  background: rgba(255,255,255,0.02);
+  transition: border-color 0.2s;
+}
+.admin-order-card--open { border-color: rgba(201,168,76,0.35); }
+.admin-order-card:hover { border-color: rgba(201,168,76,0.25); }
+
+.admin-order-card__header {
+  display: grid;
+  grid-template-columns: 90px 110px 1fr 70px 90px 110px 24px;
+  align-items: center; gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+.admin-order-card__id {
+  font-family: 'Montserrat', monospace;
+  font-size: 10px; letter-spacing: 0.08em; color: rgba(240,235,224,0.5);
+}
+.admin-order-card__date {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.55);
+}
+.admin-order-card__user {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.6);
+}
+.admin-order-card__count {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.4); text-align: center;
+}
+.admin-order-card__total {
+  font-family: 'Playfair Display', serif;
+  font-size: 14px; color: #c9a84c; text-align: right;
+}
+.admin-order-card__status {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.12em; color: #6aac8a; text-align: right;
+}
+.admin-order-card__chevron {
+  font-size: 9px; color: rgba(240,235,224,0.3); text-align: center;
+}
+
+.admin-order-card__body {
+  padding: 12px 16px 16px;
+  border-top: 1px solid rgba(201,168,76,0.1);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.admin-order-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+.admin-order-item__img {
+  width: 36px; height: 36px; object-fit: cover;
+  border: 1px solid rgba(201,168,76,0.12); flex-shrink: 0;
+}
+.admin-order-item__name {
+  flex: 1; font-family: 'Montserrat', sans-serif;
+  font-size: 12px; color: rgba(240,235,224,0.8);
+}
+.admin-order-item__meta {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; color: rgba(240,235,224,0.3);
+  padding: 2px 6px; border: 1px solid rgba(201,168,76,0.12);
+}
+.admin-order-item__qty {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.4); min-width: 28px;
+}
+.admin-order-item__price {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; color: #c9a84c; min-width: 60px; text-align: right;
+}
+.admin-order-shipping {
+  display: flex; gap: 10px; padding-top: 8px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(201,168,76,0.08);
+}
+.admin-order-shipping__label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px; letter-spacing: 0.12em; color: rgba(201,168,76,0.5);
+  white-space: nowrap; padding-top: 2px;
+}
+.admin-order-shipping__val {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.5);
+}
+
+/* ── Message cards ───────────────────────────────────── */
+.admin-msg-list { display: flex; flex-direction: column; gap: 6px; }
+
+.admin-msg-card {
+  border: 1px solid rgba(201,168,76,0.1);
+  background: rgba(255,255,255,0.02);
+  transition: border-color 0.2s;
+}
+.admin-msg-card--unread {
+  border-color: rgba(201,168,76,0.25);
+  background: rgba(201,168,76,0.025);
+}
+.admin-msg-card--open { border-color: rgba(201,168,76,0.35); }
+
+.admin-msg-card__header {
+  display: grid;
+  grid-template-columns: 16px 130px 180px 1fr 100px 20px;
+  align-items: center; gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+}
+.admin-msg-card__dot {
+  font-size: 9px; color: #c9a84c;
+}
+.admin-msg-card__dot--read { color: rgba(255,255,255,0.15); }
+.admin-msg-card__name {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; color: #f0ebe0; font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-msg-card__email {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; color: rgba(240,235,224,0.4);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-msg-card__subject {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px; color: rgba(240,235,224,0.6);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-msg-card__date {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; color: rgba(240,235,224,0.3); text-align: right;
+}
+.admin-msg-card__chevron {
+  font-size: 9px; color: rgba(240,235,224,0.3); text-align: center;
+}
+
+.admin-msg-card__body {
+  padding: 14px 16px 16px;
+  border-top: 1px solid rgba(201,168,76,0.1);
+}
+.admin-msg-card__text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px; color: rgba(240,235,224,0.75);
+  line-height: 1.7; white-space: pre-wrap; margin: 0 0 12px;
+}
+.admin-msg-card__reply-hint {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px; letter-spacing: 0.06em; color: rgba(240,235,224,0.3); margin: 0;
+}
+.admin-msg-card__email-link {
+  color: #c9a84c; text-decoration: none;
+}
+.admin-msg-card__email-link:hover { text-decoration: underline; }
+
+/* ── Contact admin notice ───────────────────────────── */
+.contact-admin-notice {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center;
+  border: 1px solid rgba(201,168,76,0.2);
+  background: rgba(201,168,76,0.04);
+  padding: 48px 32px; gap: 12px;
+}
+.contact-admin-notice__icon { font-size: 32px; color: rgba(201,168,76,0.4); }
+.contact-admin-notice__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px; font-weight: 400; color: #f0ebe0; margin: 0;
+}
+.contact-admin-notice__text {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px; line-height: 1.7; color: rgba(240,235,224,0.5);
+  max-width: 340px; margin: 0;
+}
+.contact-admin-notice__text strong { color: #c9a84c; }

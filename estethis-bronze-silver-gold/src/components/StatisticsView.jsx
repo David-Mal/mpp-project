@@ -148,10 +148,94 @@ function VBarChart({ data }) {
   );
 }
 
-export default function StatisticsView({ products, onBack, onAdd, onEdit, onDelete, canWrite }) {
+// ── Admin: expandable order card ─────────────────────────────
+function AdminOrderCard({ order }) {
+  const [open, setOpen] = useState(false);
+  const date = order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+  const shortId = (order.id || '').slice(-8).toUpperCase();
+  return (
+    <div className={`admin-order-card${open ? ' admin-order-card--open' : ''}`}>
+      <div className="admin-order-card__header" onClick={() => setOpen(p => !p)}>
+        <span className="admin-order-card__id">#{shortId}</span>
+        <span className="admin-order-card__date">{date}</span>
+        <span className="admin-order-card__user">User&nbsp;#{order.userId ?? '—'}</span>
+        <span className="admin-order-card__count">{(order.items ?? []).length} item{(order.items ?? []).length !== 1 ? 's' : ''}</span>
+        <span className="admin-order-card__total">${(order.total ?? 0).toFixed(2)}</span>
+        <span className="admin-order-card__status">✓ {(order.status || 'confirmed').toUpperCase()}</span>
+        <span className="admin-order-card__chevron">{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div className="admin-order-card__body">
+          {(order.items ?? []).map((item, i) => (
+            <div key={i} className="admin-order-item">
+              {item.productImage && (
+                <img src={item.productImage} alt={item.productName}
+                  className="admin-order-item__img"
+                  onError={e => { e.target.style.display = 'none'; }} />
+              )}
+              <span className="admin-order-item__name">{item.productName}</span>
+              {item.selectedColor && <span className="admin-order-item__meta">{item.selectedColor}</span>}
+              {item.selectedSize  && <span className="admin-order-item__meta">{item.selectedSize}</span>}
+              <span className="admin-order-item__qty">×{item.quantity}</span>
+              <span className="admin-order-item__price">${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          {order.shippingAddress && (
+            <div className="admin-order-shipping">
+              <span className="admin-order-shipping__label">SHIP TO</span>
+              <span className="admin-order-shipping__val">
+                {order.shippingAddress.firstName} {order.shippingAddress.lastName},&nbsp;
+                {order.shippingAddress.address},&nbsp;
+                {order.shippingAddress.city},&nbsp;
+                {order.shippingAddress.country}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Admin: expandable message card ────────────────────────────
+function AdminMessageCard({ msg, onMarkRead }) {
+  const [open, setOpen] = useState(false);
+  const date = msg.sentAt ? new Date(msg.sentAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+
+  const handleToggle = () => {
+    setOpen(p => !p);
+    if (!msg.read && onMarkRead) onMarkRead(msg.id);
+  };
+
+  return (
+    <div className={`admin-msg-card${msg.read ? '' : ' admin-msg-card--unread'}${open ? ' admin-msg-card--open' : ''}`}>
+      <div className="admin-msg-card__header" onClick={handleToggle}>
+        <span className={`admin-msg-card__dot${msg.read ? ' admin-msg-card__dot--read' : ''}`}>●</span>
+        <span className="admin-msg-card__name">{msg.name}</span>
+        <span className="admin-msg-card__email">{msg.email}</span>
+        <span className="admin-msg-card__subject">{msg.subject || '(No subject)'}</span>
+        <span className="admin-msg-card__date">{date}</span>
+        <span className="admin-msg-card__chevron">{open ? '▲' : '▼'}</span>
+      </div>
+      {open && (
+        <div className="admin-msg-card__body">
+          <p className="admin-msg-card__text">{msg.message}</p>
+          <p className="admin-msg-card__reply-hint">
+            Reply to: <a href={`mailto:${msg.email}`} className="admin-msg-card__email-link">{msg.email}</a>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function StatisticsView({ products, onBack, onAdd, onEdit, onDelete, canWrite, isAdmin, orders, messages, onMarkMessageRead }) {
   const [activeTab, setActiveTab] = useState("visual");
   const [sortField, setSortField] = useState("stockValue");
   const [sortDir,   setSortDir]   = useState("desc");
+
+  const allOrders   = orders   ?? [];
+  const allMessages = messages ?? [];
 
   const rows = useMemo(() => {
     const maxSV = Math.max(...products.map(p => p.price * p.stock), 1);
@@ -182,11 +266,15 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
     return Object.entries(map).map(([l, v]) => ({ label: l, value: v, color: catColor(l) })).sort((a,b) => b.value - a.value);
   }, [rows]);
 
-  const totalStock = rows.reduce((s, r) => s + r.stock, 0);
-  const avgPrice   = rows.length ? Math.round(rows.reduce((s,r) => s + r.price, 0) / rows.length) : 0;
-  const outOfStock = rows.filter(r => r.stock === 0).length;
-  const priceData  = [...rows].sort((a,b) => b.price - a.price).slice(0,10).map(r => ({ label: r.name.split(" ")[0], value: r.price, color: catColor(r.category) }));
-  const rankingRows= [...rows].sort((a,b) => b.stockValue - a.stockValue).slice(0,6);
+  const totalStock      = rows.reduce((s, r) => s + r.stock, 0);
+  const avgPrice        = rows.length ? Math.round(rows.reduce((s,r) => s + r.price, 0) / rows.length) : 0;
+  const outOfStock      = rows.filter(r => r.stock === 0).length;
+  const priceData       = [...rows].sort((a,b) => b.price - a.price).slice(0,10).map(r => ({ label: r.name.split(" ")[0], value: r.price, color: catColor(r.category) }));
+  const rankingRows     = [...rows].sort((a,b) => b.stockValue - a.stockValue).slice(0,6);
+
+  // Sales KPIs derived from orders
+  const totalRevenue    = allOrders.reduce((s, o) => s + (o.total ?? 0), 0);
+  const unreadCount     = allMessages.filter(m => !m.read).length;
 
   const TH = ({ label, field, style = {} }) => (
     <th className={`stat-tab-th ${field ? "stat-tab-th--sort" : ""} ${sortField === field ? "stat-tab-th--active" : ""}`}
@@ -202,8 +290,31 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
         <Logo onClick={onBack} />
         <nav className="stats-topnav__tabs">
           <button className="stats-topnav__link" onClick={onBack}>PRODUCTS</button>
-          <button className="stats-topnav__link stats-topnav__link--active">STATISTICS</button>
-          <button className="stats-topnav__link" style={{ opacity: 0.3, cursor: "default" }}>ORDERS</button>
+          <button
+            className={`stats-topnav__link${activeTab === 'visual' || activeTab === 'tabular' ? ' stats-topnav__link--active' : ''}`}
+            onClick={() => setActiveTab('visual')}>
+            STATISTICS
+          </button>
+          {canWrite && (
+            <button
+              className={`stats-topnav__link${activeTab === 'orders' ? ' stats-topnav__link--active' : ''}`}
+              onClick={() => setActiveTab('orders')}>
+              ORDERS
+              {allOrders.length > 0 && (
+                <span className="stats-topnav__badge">{allOrders.length}</span>
+              )}
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              className={`stats-topnav__link${activeTab === 'inbox' ? ' stats-topnav__link--active' : ''}`}
+              onClick={() => setActiveTab('inbox')}>
+              INBOX
+              {unreadCount > 0 && (
+                <span className="stats-topnav__badge stats-topnav__badge--alert">{unreadCount}</span>
+              )}
+            </button>
+          )}
         </nav>
         {canWrite && <span className="stats-topnav__admin">Admin Panel</span>}
       </div>
@@ -228,14 +339,16 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
         <>
           <div className="kpi-strip">
             {[
-              { label: "TOTAL PRODUCTS", value: rows.length,    sub: `Across ${catGroups.length} categories` },
-              { label: "TOTAL STOCK",    value: totalStock,      sub: "Units in inventory" },
-              { label: "AVG. PRICE",     value: `$${avgPrice}`,  sub: "Across all products" },
-              { label: "OUT OF STOCK",   value: outOfStock,      sub: "Need restocking", red: outOfStock > 0 },
+              { label: "TOTAL PRODUCTS", value: rows.length,                         sub: `Across ${catGroups.length} categories` },
+              { label: "TOTAL STOCK",    value: totalStock,                           sub: "Units in inventory" },
+              { label: "AVG. PRICE",     value: `$${avgPrice}`,                       sub: "Across all products" },
+              { label: "OUT OF STOCK",   value: outOfStock,                           sub: "Need restocking", red: outOfStock > 0 },
+              { label: "TOTAL REVENUE",  value: `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,  sub: `From ${allOrders.length} order${allOrders.length !== 1 ? 's' : ''}`, gold: true },
+              { label: "ORDERS PLACED",  value: allOrders.length,                    sub: "All time", gold: true },
             ].map((k, i) => (
               <div className="kpi-card" key={i}>
                 <div className="kpi-label">{k.label}</div>
-                <div className="kpi-value" style={{ color: k.red ? "#c05050" : undefined }}>{k.value}</div>
+                <div className="kpi-value" style={{ color: k.red ? "#c05050" : k.gold ? "#c9a84c" : undefined }}>{k.value}</div>
                 <div className="kpi-sub">{k.sub}</div>
               </div>
             ))}
@@ -332,6 +445,53 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
               </tbody>
             </table>
           </div>
+        </div>
+      )}
+
+      {/* ORDERS TAB */}
+      {activeTab === "orders" && canWrite && (
+        <div className="admin-tab-body">
+          <div className="admin-tab-header">
+            <h2 className="admin-tab-title">All Orders</h2>
+            <span className="admin-tab-count">{allOrders.length} total</span>
+          </div>
+          {allOrders.length === 0 ? (
+            <div className="admin-empty-state">
+              <p className="admin-empty-state__icon">◫</p>
+              <p className="admin-empty-state__text">No orders have been placed yet.</p>
+            </div>
+          ) : (
+            <div className="admin-order-list">
+              {allOrders.map(order => (
+                <AdminOrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* INBOX TAB */}
+      {activeTab === "inbox" && isAdmin && (
+        <div className="admin-tab-body">
+          <div className="admin-tab-header">
+            <h2 className="admin-tab-title">Inbox</h2>
+            <span className="admin-tab-count">
+              {allMessages.length} message{allMessages.length !== 1 ? 's' : ''}
+              {unreadCount > 0 && <span className="admin-tab-unread">&nbsp;·&nbsp;{unreadCount} unread</span>}
+            </span>
+          </div>
+          {allMessages.length === 0 ? (
+            <div className="admin-empty-state">
+              <p className="admin-empty-state__icon">✉</p>
+              <p className="admin-empty-state__text">No messages yet. They will appear here when visitors submit the Contact form.</p>
+            </div>
+          ) : (
+            <div className="admin-msg-list">
+              {allMessages.map(msg => (
+                <AdminMessageCard key={msg.id} msg={msg} onMarkRead={onMarkMessageRead} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

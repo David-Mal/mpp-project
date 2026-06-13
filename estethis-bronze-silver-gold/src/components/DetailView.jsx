@@ -5,7 +5,7 @@
 // Right: main image + thumbnail strip.
 // ─────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Logo, GoldDivider } from "./Shared";
 import ReviewsPanel from "./ReviewsPanel";
 import "../styles/components.css";
@@ -17,18 +17,28 @@ const EXTRA_THUMBS = [
   "https://images.unsplash.com/photo-1604695573706-53170668f6a6?w=100&q=60",
 ];
 
-export default function DetailView({ product, onBack, onEdit, onDelete, onAtelier, online, canWrite, onAddToCart }) {
+export default function DetailView({ product, onBack, onEdit, onDelete, onAtelier, online, canWrite, onAddToCart, onCategoryView }) {
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || "");
   const [selectedSize,  setSelectedSize]  = useState("");
+
+  // Track this product's category for cookie-based personalisation
+  useEffect(() => {
+    if (onCategoryView && product?.category) onCategoryView(product.category);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [mainImg,       setMainImg]       = useState(product.image);
   const [addedFeedback, setAddedFeedback] = useState(false);
 
   const handleAddToCart = () => {
     if (!onAddToCart) return;
-    onAddToCart(product, selectedColor, selectedSize);
-    setAddedFeedback(true);
-    setTimeout(() => setAddedFeedback(false), 2000);
+    const result = onAddToCart(product, selectedColor, selectedSize);
+    // Only show "Added" feedback when the cart was actually modified
+    // (guest interceptor returns undefined, real handler returns nothing)
+    if (result !== false) {
+      setAddedFeedback(true);
+      setTimeout(() => setAddedFeedback(false), 2000);
+    }
   };
 
   // Build thumbnail array from product image + extras

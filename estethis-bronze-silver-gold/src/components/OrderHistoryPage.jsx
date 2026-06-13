@@ -96,8 +96,68 @@ function OrderCard({ order }) {
   );
 }
 
-export default function OrderHistoryPage({ orders, currentUser, onBack, onShop }) {
-  const userOrders = (orders ?? []).filter(o => o.userId === currentUser?.id);
+// ── Coupon card ───────────────────────────────────────────────
+function CouponCard({ coupon }) {
+  const [copied, setCopied] = useState(false);
+  const now       = new Date();
+  const isExpired = coupon.expiresAt ? new Date(coupon.expiresAt) < now : false;
+  const isUsed    = !!coupon.used;
+  const inactive  = isUsed || isExpired;
+
+  const typeLabel =
+    coupon.type === "PERCENTAGE" ? "% OFF" :
+    coupon.type === "FIXED"      ? "$ OFF" : "B1G1";
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(coupon.code ?? "");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable — silent */
+    }
+  };
+
+  return (
+    <div className={`coupon-card${inactive ? " coupon-card--inactive" : ""}`}>
+      {/* Left accent strip */}
+      <div className="coupon-card__type-strip">{typeLabel}</div>
+
+      {/* Main info */}
+      <div className="coupon-card__body">
+        <div className="coupon-card__label">{coupon.label}</div>
+        <div className="coupon-card__desc">{coupon.desc}</div>
+        <div className="coupon-card__meta">
+          Expires {formatDate(coupon.expiresAt)}
+        </div>
+      </div>
+
+      {/* Right: code + status + copy */}
+      <div className="coupon-card__right">
+        <span className={`coupon-card__status coupon-card__status--${isUsed ? "used" : isExpired ? "expired" : "available"}`}>
+          {isUsed ? "USED" : isExpired ? "EXPIRED" : "AVAILABLE"}
+        </span>
+        <div className="coupon-card__code">{coupon.code}</div>
+        {!inactive && (
+          <button className="coupon-card__copy" onClick={handleCopy}>
+            {copied ? "✓ COPIED" : "COPY CODE"}
+          </button>
+        )}
+      </div>
+
+      {/* Decorative notches */}
+      <div className="coupon-card__notch coupon-card__notch--left" />
+      <div className="coupon-card__notch coupon-card__notch--right" />
+    </div>
+  );
+}
+
+export default function OrderHistoryPage({ orders, coupons, currentUser, onBack, onShop }) {
+  const [activeTab, setActiveTab] = useState("orders");
+
+  const userOrders  = (orders  ?? []).filter(o => o.userId  === currentUser?.id);
+  const userCoupons = (coupons ?? []).filter(c => c.userId  === currentUser?.id);
+  const availableCouponCount = userCoupons.filter(c => !c.used && new Date(c.expiresAt) > new Date()).length;
 
   return (
     <div className="orders-page page-enter">
@@ -112,33 +172,80 @@ export default function OrderHistoryPage({ orders, currentUser, onBack, onShop }
 
       <div className="orders-body">
         <div className="orders-header">
-          <h2 className="orders-heading">Order History</h2>
+          <h2 className="orders-heading">
+            {(currentUser?.email ?? "Guest").split("@")[0]}
+          </h2>
           <p className="orders-subheading">
-            {userOrders.length > 0
-              ? `${userOrders.length} ORDER${userOrders.length !== 1 ? "S" : ""} · ${currentUser?.email ?? ""}`
-              : `WELCOME, ${(currentUser?.email ?? "GUEST").split("@")[0].toUpperCase()}`}
+            {currentUser?.email ?? ""}
           </p>
         </div>
 
-        <GoldDivider width={120} style={{ marginBottom: 32 }} />
+        {/* Tab bar */}
+        <div className="account-tabs">
+          <button
+            className={`account-tab${activeTab === "orders" ? " account-tab--active" : ""}`}
+            onClick={() => setActiveTab("orders")}
+          >
+            ORDERS
+            {userOrders.length > 0 && (
+              <span className="account-tab__badge">{userOrders.length}</span>
+            )}
+          </button>
+          <button
+            className={`account-tab${activeTab === "coupons" ? " account-tab--active" : ""}`}
+            onClick={() => setActiveTab("coupons")}
+          >
+            MY COUPONS
+            {availableCouponCount > 0 && (
+              <span className="account-tab__badge account-tab__badge--gold">{availableCouponCount}</span>
+            )}
+          </button>
+        </div>
 
-        {userOrders.length === 0 ? (
-          <div className="orders-empty">
-            <span className="orders-empty__icon">◻</span>
-            <p className="orders-empty__title">No orders yet</p>
-            <p className="orders-empty__sub">
-              Your order history will appear here after your first purchase.
-            </p>
-            <button className="orders-empty__cta" onClick={onShop}>
-              BROWSE COLLECTION
-            </button>
-          </div>
-        ) : (
-          <div className="orders-list">
-            {userOrders.map(order => (
-              <OrderCard key={order.id} order={order} />
-            ))}
-          </div>
+        <GoldDivider style={{ marginBottom: 28 }} />
+
+        {/* ── Orders tab ── */}
+        {activeTab === "orders" && (
+          userOrders.length === 0 ? (
+            <div className="orders-empty">
+              <span className="orders-empty__icon">◻</span>
+              <p className="orders-empty__title">No orders yet</p>
+              <p className="orders-empty__sub">
+                Your order history will appear here after your first purchase.
+              </p>
+              <button className="orders-empty__cta" onClick={onShop}>
+                BROWSE COLLECTION
+              </button>
+            </div>
+          ) : (
+            <div className="orders-list">
+              {userOrders.map(order => (
+                <OrderCard key={order.id} order={order} />
+              ))}
+            </div>
+          )
+        )}
+
+        {/* ── Coupons tab ── */}
+        {activeTab === "coupons" && (
+          userCoupons.length === 0 ? (
+            <div className="orders-empty">
+              <span className="orders-empty__icon">✦</span>
+              <p className="orders-empty__title">No coupons yet</p>
+              <p className="orders-empty__sub">
+                Complete a purchase for a chance to win discount coupons via the Ticket Machine.
+              </p>
+              <button className="orders-empty__cta" onClick={onShop}>
+                BROWSE COLLECTION
+              </button>
+            </div>
+          ) : (
+            <div className="coupons-list">
+              {userCoupons.map(coupon => (
+                <CouponCard key={coupon.id} coupon={coupon} />
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>

@@ -95,7 +95,7 @@ function AboutContent() {
 }
 
 // ── Contact ──────────────────────────────────────────────────
-function ContactContent() {
+function ContactContent({ isAdmin, onSendMessage }) {
   const [form, setForm] = useState({ name: "", email: "", subject: "", message: "" });
   const [sent, setSent] = useState(false);
 
@@ -104,76 +104,100 @@ function ContactContent() {
   const handleSubmit = e => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return;
+    const msg = {
+      id:      (globalThis.crypto?.randomUUID?.()) || `msg-${Date.now()}`,
+      name:    form.name.trim(),
+      email:   form.email.trim(),
+      subject: form.subject.trim(),
+      message: form.message.trim(),
+      sentAt:  new Date().toISOString(),
+      read:    false,
+    };
+    onSendMessage?.(msg);
     setSent(true);
   };
 
+  const infoColumn = (
+    <div className="contact-info">
+      <div className="contact-info-item">
+        <span className="contact-info-label">HEADQUARTERS</span>
+        <span className="contact-info-value">
+          Via della Vigna Nuova, 18<br />
+          50123 Florence, Italy
+        </span>
+      </div>
+      <div className="contact-info-item">
+        <span className="contact-info-label">NEW YORK ATELIER</span>
+        <span className="contact-info-value">
+          420 West 14th Street, Suite 301<br />
+          New York, NY 10014
+        </span>
+      </div>
+      <div className="contact-info-item">
+        <span className="contact-info-label">EMAIL</span>
+        <span className="contact-info-value">hello@estethis.com</span>
+      </div>
+      <div className="contact-info-item">
+        <span className="contact-info-label">CLIENT SERVICES</span>
+        <span className="contact-info-value">+1 (212) 555-0174</span>
+      </div>
+      <div className="contact-info-item">
+        <span className="contact-info-label">HOURS</span>
+        <span className="contact-info-value">
+          Monday – Friday: 9:00 – 18:00 CET<br />
+          Saturday: 10:00 – 15:00 CET
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="contact-grid">
-      {/* Info column */}
-      <div className="contact-info">
-        <div className="contact-info-item">
-          <span className="contact-info-label">HEADQUARTERS</span>
-          <span className="contact-info-value">
-            Via della Vigna Nuova, 18<br />
-            50123 Florence, Italy
-          </span>
-        </div>
-        <div className="contact-info-item">
-          <span className="contact-info-label">NEW YORK ATELIER</span>
-          <span className="contact-info-value">
-            420 West 14th Street, Suite 301<br />
-            New York, NY 10014
-          </span>
-        </div>
-        <div className="contact-info-item">
-          <span className="contact-info-label">EMAIL</span>
-          <span className="contact-info-value">hello@estethis.com</span>
-        </div>
-        <div className="contact-info-item">
-          <span className="contact-info-label">CLIENT SERVICES</span>
-          <span className="contact-info-value">+1 (212) 555-0174</span>
-        </div>
-        <div className="contact-info-item">
-          <span className="contact-info-label">HOURS</span>
-          <span className="contact-info-value">
-            Monday – Friday: 9:00 – 18:00 CET<br />
-            Saturday: 10:00 – 15:00 CET
-          </span>
-        </div>
-      </div>
+      {infoColumn}
 
-      {/* Form column */}
-      <form className="contact-form" onSubmit={handleSubmit}>
-        {sent ? (
-          <p className="contact-sent">
-            ✓ &nbsp;Thank you for reaching out. A member of our team will respond within 24 hours.
+      {/* Form column — admin sees a notice instead of the form */}
+      {isAdmin ? (
+        <div className="contact-admin-notice">
+          <div className="contact-admin-notice__icon">✉</div>
+          <p className="contact-admin-notice__title">Administrator View</p>
+          <p className="contact-admin-notice__text">
+            Contact form submissions from visitors are stored in the Admin Panel.
+            Navigate to <strong>Statistics → Inbox</strong> to read and manage messages.
           </p>
-        ) : (
-          <>
-            <div className="contact-field">
-              <label className="contact-label">YOUR NAME</label>
-              <input className="contact-input" value={form.name} onChange={set("name")}
-                placeholder="Full name" required />
-            </div>
-            <div className="contact-field">
-              <label className="contact-label">EMAIL ADDRESS</label>
-              <input className="contact-input" type="email" value={form.email} onChange={set("email")}
-                placeholder="you@example.com" required />
-            </div>
-            <div className="contact-field">
-              <label className="contact-label">SUBJECT</label>
-              <input className="contact-input" value={form.subject} onChange={set("subject")}
-                placeholder="Order enquiry, bespoke consultation…" />
-            </div>
-            <div className="contact-field">
-              <label className="contact-label">MESSAGE</label>
-              <textarea className="contact-textarea" value={form.message} onChange={set("message")}
-                placeholder="Write your message here…" required />
-            </div>
-            <button type="submit" className="contact-submit">SEND MESSAGE</button>
-          </>
-        )}
-      </form>
+        </div>
+      ) : (
+        <form className="contact-form" onSubmit={handleSubmit}>
+          {sent ? (
+            <p className="contact-sent">
+              ✓ &nbsp;Thank you for reaching out. A member of our team will respond within 24 hours.
+            </p>
+          ) : (
+            <>
+              <div className="contact-field">
+                <label className="contact-label">YOUR NAME</label>
+                <input className="contact-input" value={form.name} onChange={set("name")}
+                  placeholder="Full name" required />
+              </div>
+              <div className="contact-field">
+                <label className="contact-label">EMAIL ADDRESS</label>
+                <input className="contact-input" type="email" value={form.email} onChange={set("email")}
+                  placeholder="you@example.com" required />
+              </div>
+              <div className="contact-field">
+                <label className="contact-label">SUBJECT</label>
+                <input className="contact-input" value={form.subject} onChange={set("subject")}
+                  placeholder="Order enquiry, bespoke consultation…" />
+              </div>
+              <div className="contact-field">
+                <label className="contact-label">MESSAGE</label>
+                <textarea className="contact-textarea" value={form.message} onChange={set("message")}
+                  placeholder="Write your message here…" required />
+              </div>
+              <button type="submit" className="contact-submit">SEND MESSAGE</button>
+            </>
+          )}
+        </form>
+      )}
     </div>
   );
 }
@@ -290,9 +314,10 @@ const PAGE_CONFIG = {
 };
 
 // ── Main component ────────────────────────────────────────────
-export default function StaticPage({ type, onBack, onNavigate }) {
+export default function StaticPage({ type, onBack, onNavigate, currentUser, onSendMessage }) {
   const config = PAGE_CONFIG[type] ?? PAGE_CONFIG.about;
   const { eyebrow, title, lead, Content } = config;
+  const isAdmin = currentUser?.role === 'admin';
 
   const [titleLine1, titleLine2] = title.split("\n");
 
@@ -318,9 +343,9 @@ export default function StaticPage({ type, onBack, onNavigate }) {
 
       <GoldDivider style={{ width: "100%", opacity: 0.4 }} />
 
-      {/* Body */}
+      {/* Body — pass admin/message props; non-Contact pages ignore them */}
       <div className="static-body">
-        <Content />
+        <Content isAdmin={isAdmin} onSendMessage={onSendMessage} />
       </div>
 
       <Footer onNavigate={onNavigate} />

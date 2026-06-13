@@ -7,12 +7,32 @@ import { useState, useMemo } from "react";
 import { Logo, GoldDivider } from "./Shared";
 
 const MEASUREMENT_POINTS = [
-  { id: "shoulder", label: "Shoulder", cx: 58,  cy: 32,  field: "shoulder",  placeholder: "e.g. 38" },
-  { id: "chest",    label: "Chest",    cx: 50,  cy: 45,  field: "chest",     placeholder: "e.g. 86" },
-  { id: "sleeve",   label: "Sleeve",   cx: 30,  cy: 52,  field: "sleeve",    placeholder: "e.g. 62" },
-  { id: "waist",    label: "Waist",    cx: 50,  cy: 60,  field: "waist",     placeholder: "e.g. 68" },
-  { id: "length",   label: "Length",   cx: 50,  cy: 82,  field: "length",    placeholder: "e.g. 65" },
+  { id: "shoulder", label: "Shoulder", cx: 58,  cy: 32,  field: "shoulder", placeholder: "e.g. 38", min: 25, max: 70  },
+  { id: "chest",    label: "Chest",    cx: 50,  cy: 45,  field: "chest",    placeholder: "e.g. 86", min: 60, max: 200 },
+  { id: "sleeve",   label: "Sleeve",   cx: 30,  cy: 52,  field: "sleeve",   placeholder: "e.g. 62", min: 40, max: 90  },
+  { id: "waist",    label: "Waist",    cx: 50,  cy: 60,  field: "waist",    placeholder: "e.g. 68", min: 50, max: 200 },
+  { id: "length",   label: "Length",   cx: 50,  cy: 82,  field: "length",   placeholder: "e.g. 65", min: 40, max: 130 },
 ];
+
+// Returns { field: errorString } for every invalid measurement.
+// Returns {} when all measurements are valid.
+function validateMeasurements(measurements) {
+  const errors = {};
+  for (const pt of MEASUREMENT_POINTS) {
+    const raw = measurements[pt.field];
+    if (raw === "" || raw === null || raw === undefined) {
+      errors[pt.field] = `${pt.label} is required`;
+    } else {
+      const num = parseFloat(raw);
+      if (isNaN(num) || num <= 0) {
+        errors[pt.field] = `${pt.label} must be a positive number`;
+      } else if (num < pt.min || num > pt.max) {
+        errors[pt.field] = `${pt.label} must be ${pt.min}–${pt.max} cm`;
+      }
+    }
+  }
+  return errors;
+}
 
 const SIZES = ["XS", "S", "M", "L", "XL"];
 
@@ -118,8 +138,20 @@ export default function AtelierMode({ products, onBack }) {
   const [measurements, setMeasurements] = useState({
     shoulder: "", chest: "", waist: "", sleeve: "", length: "",
   });
-  const [notes, setNotes]   = useState("");
-  const [sent,  setSent]    = useState(false);
+  const [notes,         setNotes]         = useState("");
+  const [sent,          setSent]          = useState(false);
+  const [measureErrors, setMeasureErrors] = useState({});
+
+  // Validate before advancing from Step 2 → Step 3
+  const handleNextToStep3 = () => {
+    const errors = validateMeasurements(measurements);
+    if (Object.keys(errors).length > 0) {
+      setMeasureErrors(errors);
+      return;
+    }
+    setMeasureErrors({});
+    setStep(3);
+  };
 
   const selected = useMemo(() => products.find(p => p.id === selectedId), [products, selectedId]);
   const others   = useMemo(() => products.filter(p => p.id !== selectedId).slice(0, 3), [products, selectedId]);
@@ -362,28 +394,52 @@ export default function AtelierMode({ products, onBack }) {
               }}>{activePt?.label}</span>
             </div>
 
-            {MEASUREMENT_POINTS.map(pt => (
-              <div key={pt.id} style={{ marginBottom: 14 }}
-                onClick={() => setSelectedPt(pt.id)}>
-                <label style={{
-                  display: "block", fontFamily: "Montserrat,sans-serif",
-                  fontSize: 8, letterSpacing: "0.18em",
-                  color: selectedPt === pt.id ? "#c9a84c" : "rgba(240,235,224,0.4)",
-                  marginBottom: 6, transition: "color 0.2s", cursor: "pointer",
-                }}>
-                  {pt.label.toUpperCase()} (CM)
-                </label>
-                <input
-                  className="auth-input"
-                  style={{ borderRadius: 0, padding: "9px 12px", fontSize: 13,
-                    borderColor: selectedPt === pt.id ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.15)" }}
-                  type="number"
-                  value={measurements[pt.field]}
-                  onChange={e => setM(pt.field, e.target.value)}
-                  placeholder={pt.placeholder}
-                />
-              </div>
-            ))}
+            {MEASUREMENT_POINTS.map(pt => {
+              const hasError = !!measureErrors[pt.field];
+              return (
+                <div key={pt.id} style={{ marginBottom: 14 }}
+                  onClick={() => setSelectedPt(pt.id)}>
+                  <label style={{
+                    display: "block", fontFamily: "Montserrat,sans-serif",
+                    fontSize: 8, letterSpacing: "0.18em",
+                    color: hasError ? "#e06c75" : selectedPt === pt.id ? "#c9a84c" : "rgba(240,235,224,0.4)",
+                    marginBottom: 6, transition: "color 0.2s", cursor: "pointer",
+                  }}>
+                    {pt.label.toUpperCase()} (CM)
+                    <span style={{ marginLeft: 8, fontSize: 7, letterSpacing: "0.08em",
+                      color: "rgba(240,235,224,0.3)", fontStyle: "italic" }}>
+                      {pt.min}–{pt.max}
+                    </span>
+                  </label>
+                  <input
+                    className="auth-input"
+                    style={{
+                      borderRadius: 0, padding: "9px 12px", fontSize: 13,
+                      borderColor: hasError
+                        ? "rgba(224,108,117,0.6)"
+                        : selectedPt === pt.id ? "rgba(201,168,76,0.5)" : "rgba(201,168,76,0.15)",
+                    }}
+                    type="number"
+                    min={pt.min}
+                    max={pt.max}
+                    value={measurements[pt.field]}
+                    onChange={e => {
+                      setM(pt.field, e.target.value);
+                      if (measureErrors[pt.field]) {
+                        setMeasureErrors(prev => ({ ...prev, [pt.field]: null }));
+                      }
+                    }}
+                    placeholder={pt.placeholder}
+                  />
+                  {hasError && (
+                    <p style={{ fontFamily: "Montserrat,sans-serif", fontSize: 9,
+                      color: "#e06c75", marginTop: 4, letterSpacing: "0.06em" }}>
+                      ⚠ {measureErrors[pt.field]}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
 
             <div style={{ marginBottom: 14 }}>
               <label style={{ display: "block", fontFamily: "Montserrat,sans-serif",
@@ -420,8 +476,16 @@ export default function AtelierMode({ products, onBack }) {
               ))}
             </div>
 
+            {Object.values(measureErrors).some(Boolean) && (
+              <p style={{ fontFamily: "Montserrat,sans-serif", fontSize: 9,
+                color: "#e06c75", letterSpacing: "0.08em", marginBottom: 10,
+                padding: "8px 10px", border: "1px solid rgba(224,108,117,0.3)",
+                background: "rgba(224,108,117,0.05)" }}>
+                ⚠ Please correct the highlighted measurements before continuing.
+              </p>
+            )}
             <button className="auth-btn" style={{ borderRadius: 0, marginTop: 0, marginBottom: 8 }}
-              onClick={() => setStep(3)}>
+              onClick={handleNextToStep3}>
               NEXT — REVIEW & SEND →
             </button>
             <button onClick={() => setStep(1)}
@@ -527,7 +591,7 @@ export default function AtelierMode({ products, onBack }) {
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => setStep(2)}
+              <button onClick={() => { setMeasureErrors({}); setStep(2); }}
                 style={{
                   flex: 1, padding: "14px",
                   border: "1px solid rgba(201,168,76,0.2)",

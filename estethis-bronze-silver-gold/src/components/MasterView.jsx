@@ -34,9 +34,16 @@ export default function MasterView({
   onCartOpen, cartItemCount,
   // Account + footer navigation
   onAccount, onNavigate,
+  // Cookie-based personalisation (Phase 5)
+  recentCategories,
+  // Guest mode (Phase 6)
+  isGuest, onGuestSignIn, onGuestRegister,
 }) {
   const sentinelRef = useRef(null);
   const [localSearch, setLocalSearch] = useState(search ?? '');
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => !!sessionStorage.getItem('estethis_banner_dismissed')
+  );
 
   // Debounce search → parent.
   useEffect(() => {
@@ -73,57 +80,102 @@ export default function MasterView({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
-          {onCartOpen && (
-            <button className="cart-nav-btn" onClick={onCartOpen} title="Your cart" aria-label="Open cart">
-              🛒
-              {cartItemCount > 0 && (
-                <span className="cart-nav-badge">{cartItemCount > 99 ? '99+' : cartItemCount}</span>
+          {isGuest ? (
+            /* ── Guest header: sign-in + register only ── */
+            <>
+              <button className="guest-signin-btn" onClick={onGuestSignIn}>
+                SIGN IN
+              </button>
+              <button className="guest-register-btn" onClick={onGuestRegister}>
+                CREATE ACCOUNT
+              </button>
+            </>
+          ) : (
+            /* ── Authenticated header ── */
+            <>
+              {onCartOpen && (
+                <button className="cart-nav-btn" onClick={onCartOpen} title="Your cart" aria-label="Open cart">
+                  🛒
+                  {cartItemCount > 0 && (
+                    <span className="cart-nav-badge">{cartItemCount > 99 ? '99+' : cartItemCount}</span>
+                  )}
+                </button>
               )}
-            </button>
-          )}
-          {onStats && (
-            <button className="stats-btn" onClick={onStats}>⬡ STATISTICS</button>
-          )}
-          {onAtelier && (
-            <button className="stats-btn" onClick={onAtelier}
-              style={{ borderColor: 'rgba(201,168,76,0.3)' }}>✦ ATELIER</button>
-          )}
-          {onUsers && (
-            <button className="stats-btn" onClick={onUsers}
-              style={{ borderColor: 'rgba(201,168,76,0.5)' }}>⚙ USERS</button>
-          )}
-          {onLogs && (
-            <button className="stats-btn" onClick={onLogs}
-              style={{ borderColor: 'rgba(201,168,76,0.4)' }}>◈ LOGS</button>
-          )}
-          {onObservation && (
-            <button className="stats-btn" onClick={onObservation}
-              style={{ borderColor: 'rgba(224,108,117,0.5)', color: '#e06c75' }}>⚠ THREATS</button>
-          )}
-          {canWrite && (
-            <button className="add-btn" onClick={onAdd}>
-              <span style={{
-                width: 20, height: 20, border: '1px solid #c9a84c',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, lineHeight: 1,
-              }}>+</span>
-              add new product
-            </button>
-          )}
-          {onAccount && (
-            <button className="stats-btn" onClick={onAccount}
-              style={{ borderColor: 'rgba(201,168,76,0.35)' }}>
-              ◈ MY ACCOUNT
-            </button>
-          )}
-          {onLogout && (
-            <button className="stats-btn" onClick={onLogout}
-              style={{ borderColor: 'rgba(224,108,117,0.5)', color: '#e06c75', fontSize: 11 }}>
-              {currentUser?.email ? `↩ ${currentUser.email.split('@')[0].toUpperCase()}` : '↩ LOGOUT'}
-            </button>
+              {onStats && (
+                <button className="stats-btn" onClick={onStats}>⬡ STATISTICS</button>
+              )}
+              {onAtelier && (
+                <button className="stats-btn" onClick={onAtelier}
+                  style={{ borderColor: 'rgba(201,168,76,0.3)' }}>✦ ATELIER</button>
+              )}
+              {onUsers && (
+                <button className="stats-btn" onClick={onUsers}
+                  style={{ borderColor: 'rgba(201,168,76,0.5)' }}>⚙ USERS</button>
+              )}
+              {onLogs && (
+                <button className="stats-btn" onClick={onLogs}
+                  style={{ borderColor: 'rgba(201,168,76,0.4)' }}>◈ LOGS</button>
+              )}
+              {onObservation && (
+                <button className="stats-btn" onClick={onObservation}
+                  style={{ borderColor: 'rgba(224,108,117,0.5)', color: '#e06c75' }}>⚠ THREATS</button>
+              )}
+              {canWrite && (
+                <button className="add-btn" onClick={onAdd}>
+                  <span style={{
+                    width: 20, height: 20, border: '1px solid #c9a84c',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 14, lineHeight: 1,
+                  }}>+</span>
+                  add new product
+                </button>
+              )}
+              {onAccount && (
+                <button className="stats-btn" onClick={onAccount}
+                  style={{ borderColor: 'rgba(201,168,76,0.35)' }}>
+                  ◈ MY ACCOUNT
+                </button>
+              )}
+              {onLogout && (
+                <button className="stats-btn" onClick={onLogout}
+                  style={{ borderColor: 'rgba(224,108,117,0.5)', color: '#e06c75', fontSize: 11 }}>
+                  {currentUser?.email ? `↩ ${currentUser.email.split('@')[0].toUpperCase()}` : '↩ LOGOUT'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
+
+      {/* Personalisation banner — visible when cookie categories exist */}
+      {!bannerDismissed && recentCategories?.length > 0 && (
+        <div className="personalization-banner">
+          <span className="personalization-banner__label">
+            ✦ Recently browsed:
+          </span>
+          <div className="personalization-banner__cats">
+            {recentCategories.slice(0, 3).map(cat => (
+              <button
+                key={cat}
+                className="personalization-banner__chip"
+                onClick={() => onSearchChange?.(cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          <button
+            className="personalization-banner__dismiss"
+            onClick={() => {
+              sessionStorage.setItem('estethis_banner_dismissed', '1');
+              setBannerDismissed(true);
+            }}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Search + sort toolbar */}
       <div className="master__toolbar">
