@@ -296,7 +296,7 @@ export default function App() {
     fetchFn: fetchProductsFiltered,
     search,
     sort,
-    enabled: authStage === 'app' && online,
+    enabled: (authStage === 'app' || authStage === 'guest') && online,
   });
 
   // Keep a flat "all products" list for StatisticsView + DetailView
