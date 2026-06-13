@@ -526,7 +526,7 @@ export default function App() {
             onAdd={() => navigate('add')}
             onStats={() => navigate('stats')}
             onHome={() => navigate('landing')}
-            onAtelier={canWrite ? () => navigate('atelier') : null}
+            onAtelier={!isGuest ? () => navigate('atelier') : null}
             onUsers={isAdmin ? () => navigate('users') : null}
             onLogs={isAdmin ? () => navigate('logs') : null}
             onObservation={isAdmin ? () => navigate('observation') : null}
@@ -554,7 +554,7 @@ export default function App() {
           onBack={() => navigate('master')}
           onEdit={id => navigate('edit', { id })}
           onDelete={handleDelete}
-          onAtelier={canWrite ? () => navigate('atelier') : null}
+          onAtelier={!isGuest ? () => navigate('atelier') : null}
           onAddToCart={isGuest ? handleGuestAction : handleAddToCart}
           onCategoryView={trackCategoryView}
           online={online}
