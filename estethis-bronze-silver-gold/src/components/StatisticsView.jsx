@@ -148,7 +148,7 @@ function VBarChart({ data }) {
   );
 }
 
-export default function StatisticsView({ products, onBack, onAdd, onEdit, onDelete }) {
+export default function StatisticsView({ products, onBack, onAdd, onEdit, onDelete, canWrite }) {
   const [activeTab, setActiveTab] = useState("visual");
   const [sortField, setSortField] = useState("stockValue");
   const [sortDir,   setSortDir]   = useState("desc");
@@ -205,7 +205,7 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
           <button className="stats-topnav__link stats-topnav__link--active">STATISTICS</button>
           <button className="stats-topnav__link" style={{ opacity: 0.3, cursor: "default" }}>ORDERS</button>
         </nav>
-        <span className="stats-topnav__admin">Admin Panel</span>
+        {canWrite && <span className="stats-topnav__admin">Admin Panel</span>}
       </div>
       <GoldDivider style={{ width: "100%" }} />
 
@@ -293,7 +293,7 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
                   <TH label="STOCK VALUE" field="stockValue" style={{ width: 100 }} />
                   <TH label="RATING"      field="rating"     style={{ width: 110 }} />
                   <TH label="STATUS"      style={{ width: 62 }} />
-                  <th className="stat-tab-th" style={{ width: 72 }} />
+                  {canWrite && <th className="stat-tab-th" style={{ width: 72 }} />}
                 </tr>
               </thead>
               <tbody>
@@ -320,11 +320,13 @@ export default function StatisticsView({ products, onBack, onAdd, onEdit, onDele
                     </td>
                     <td className="stat-tab-td"><Stars rating={p.rating} /></td>
                     <td className="stat-tab-td"><StatusBadge stock={p.stock} /></td>
-                    <td className="stat-tab-td" style={{ display: "flex", gap: 6, justifyContent: "center" }}
-                      onClick={e => e.stopPropagation()}>
-                      <button className="icon-btn icon-btn--edit"   onClick={() => onEdit(p.id)}   title="Edit">✎</button>
-                      <button className="icon-btn icon-btn--delete" onClick={() => onDelete(p.id)} title="Delete">🗑</button>
-                    </td>
+                    {canWrite && (
+                      <td className="stat-tab-td" style={{ display: "flex", gap: 6, justifyContent: "center" }}
+                        onClick={e => e.stopPropagation()}>
+                        <button className="icon-btn icon-btn--edit"   onClick={() => onEdit(p.id)}   title="Edit">✎</button>
+                        <button className="icon-btn icon-btn--delete" onClick={() => onDelete(p.id)} title="Delete">🗑</button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

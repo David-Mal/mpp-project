@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Logo, GoldDivider } from "./Shared";
 import ReviewsPanel from "./ReviewsPanel";
 import "../styles/components.css";
+import "../styles/cart.css";
 
 // Extra thumbnail images to fill the strip (reuses unsplash)
 const EXTRA_THUMBS = [
@@ -16,11 +17,19 @@ const EXTRA_THUMBS = [
   "https://images.unsplash.com/photo-1604695573706-53170668f6a6?w=100&q=60",
 ];
 
-export default function DetailView({ product, onBack, onEdit, onDelete, onAtelier, online }) {
+export default function DetailView({ product, onBack, onEdit, onDelete, onAtelier, online, canWrite, onAddToCart }) {
   const [selectedColor, setSelectedColor] = useState(product.colors[0] || "");
   const [selectedSize,  setSelectedSize]  = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [mainImg,       setMainImg]       = useState(product.image);
+  const [addedFeedback, setAddedFeedback] = useState(false);
+
+  const handleAddToCart = () => {
+    if (!onAddToCart) return;
+    onAddToCart(product, selectedColor, selectedSize);
+    setAddedFeedback(true);
+    setTimeout(() => setAddedFeedback(false), 2000);
+  };
 
   // Build thumbnail array from product image + extras
   const thumbs = [product.image, ...EXTRA_THUMBS].slice(0, 3);
@@ -43,9 +52,11 @@ export default function DetailView({ product, onBack, onEdit, onDelete, onAtelie
             <button className="nav-btn nav-btn--gold" onClick={onAtelier}
               style={{ borderColor: "rgba(201,168,76,0.5)" }}>✦ ATELIER</button>
           )}
-          <button className="nav-btn nav-btn--gold"  onClick={() => onEdit(product.id)}>EDIT</button>
+          {canWrite && (
+            <button className="nav-btn nav-btn--gold" onClick={() => onEdit(product.id)}>EDIT</button>
+          )}
 
-          {!confirmDelete ? (
+          {canWrite && (!confirmDelete ? (
             <button className="nav-btn nav-btn--danger" onClick={() => setConfirmDelete(true)}>
               DELETE
             </button>
@@ -61,7 +72,7 @@ export default function DetailView({ product, onBack, onEdit, onDelete, onAtelie
                 onClick={() => setConfirmDelete(false)}
               >NO</button>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -165,6 +176,17 @@ export default function DetailView({ product, onBack, onEdit, onDelete, onAtelie
               {product.stock > 0 ? `${product.stock} IN STOCK` : "OUT OF STOCK"}
             </span>
           </div>
+
+          {/* Add to Cart */}
+          {onAddToCart && (
+            <button
+              className={`add-to-cart-btn${addedFeedback ? " add-to-cart-btn--added" : ""}`}
+              onClick={handleAddToCart}
+              disabled={product.stock === 0}
+            >
+              {addedFeedback ? "✓ ADDED TO CART" : product.stock === 0 ? "OUT OF STOCK" : "ADD TO CART"}
+            </button>
+          )}
         </div>
 
         {/* RIGHT: images */}

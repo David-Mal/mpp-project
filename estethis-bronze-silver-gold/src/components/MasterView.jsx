@@ -13,7 +13,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Logo, GoldDivider } from './Shared';
+import Footer from './Footer';
 import '../styles/components.css';
+import '../styles/cart.css';
 
 export default function MasterView({
   // infinite-scroll data from useInfiniteProducts
@@ -28,6 +30,10 @@ export default function MasterView({
   onLoadMore,
   // Silver: side-by-side charts slot
   sideCharts,
+  // Cart
+  onCartOpen, cartItemCount,
+  // Account + footer navigation
+  onAccount, onNavigate,
 }) {
   const sentinelRef = useRef(null);
   const [localSearch, setLocalSearch] = useState(search ?? '');
@@ -67,6 +73,14 @@ export default function MasterView({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
+          {onCartOpen && (
+            <button className="cart-nav-btn" onClick={onCartOpen} title="Your cart" aria-label="Open cart">
+              🛒
+              {cartItemCount > 0 && (
+                <span className="cart-nav-badge">{cartItemCount > 99 ? '99+' : cartItemCount}</span>
+              )}
+            </button>
+          )}
           {onStats && (
             <button className="stats-btn" onClick={onStats}>⬡ STATISTICS</button>
           )}
@@ -94,6 +108,12 @@ export default function MasterView({
                 fontSize: 14, lineHeight: 1,
               }}>+</span>
               add new product
+            </button>
+          )}
+          {onAccount && (
+            <button className="stats-btn" onClick={onAccount}
+              style={{ borderColor: 'rgba(201,168,76,0.35)' }}>
+              ◈ MY ACCOUNT
             </button>
           )}
           {onLogout && (
@@ -209,6 +229,8 @@ export default function MasterView({
 
         {sideCharts}
       </div>
+
+      <Footer onNavigate={onNavigate} />
     </div>
   );
 }

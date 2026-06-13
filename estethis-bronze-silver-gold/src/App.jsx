@@ -36,7 +36,12 @@ import ProductForm      from './components/ProductForm';
 import OfflineBanner    from './components/OfflineBanner';
 import GeneratorPanel   from './components/GeneratorPanel';
 import LiveCharts       from './components/LiveCharts';
-import { Toast }        from './components/Shared';
+import CartDrawer          from './components/CartDrawer';
+import CheckoutPage        from './components/CheckoutPage';
+import OrderHistoryPage    from './components/OrderHistoryPage';
+import StaticPage          from './components/StaticPage';
+import TicketMachinePage   from './components/TicketMachinePage';
+import { Toast }           from './components/Shared';
 
 import './data/tests';
 
@@ -87,6 +92,8 @@ export default function App() {
     setAuthStage('login');
     setView('landing');
     setAllProducts([]);
+    setCartItems([]);
+    localStorage.removeItem('estethis_cart');
   }, []);
 
   // ── Inactivity auto-logout (30 min, matches server SESSION_TIMEOUT_MS) ──
@@ -119,6 +126,100 @@ export default function App() {
     if (opts.id !== undefined) setSelectedId(opts.id);
     setView(nextView);
   }, []);
+
+  // ── Cart state (Phase 2) ─────────────────────────────────────
+  const [cartItems, setCartItems] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('estethis_cart') || '[]'); } catch { return []; }
+  });
+  const [cartOpen, setCartOpen] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('estethis_cart', JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  // Orders — persisted per-session (Phase 3 reads these for history)
+  const [orders, setOrders] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('estethis_orders') || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem('estethis_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  // Last placed order — handed to the Ticket Machine (Phase 4)
+  const [lastOrder, setLastOrder] = useState(null);
+
+  // Coupons won via Ticket Machine — persisted
+  const [coupons, setCoupons] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('estethis_coupons') || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    localStorage.setItem('estethis_coupons', JSON.stringify(coupons));
+  }, [coupons]);
+
+  const handleSaveCoupon = useCallback((coupon) => {
+    setCoupons(prev => [coupon, ...prev]);
+  }, []);
+
+  const cartItemCount = cartItems.reduce((s, i) => s + i.quantity, 0);
+
+  const handleAddToCart = useCallback((product, selectedColor, selectedSize) => {
+    setCartItems(prev => {
+      const existing = prev.find(i => i.product.id === product.id);
+      if (existing) {
+        return prev.map(i =>
+          i.product.id === product.id
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
+        );
+      }
+      return [...prev, { product, quantity: 1, selectedColor, selectedSize }];
+    });
+    notify(`${product.name} added to cart.`);
+  }, [notify]);
+
+  const handleRemoveFromCart = useCallback((productId) => {
+    setCartItems(prev => prev.filter(i => i.product.id !== productId));
+  }, []);
+
+  const handleUpdateCartQty = useCallback((productId, qty) => {
+    if (qty <= 0) {
+      setCartItems(prev => prev.filter(i => i.product.id !== productId));
+    } else {
+      setCartItems(prev =>
+        prev.map(i => i.product.id === productId ? { ...i, quantity: qty } : i)
+      );
+    }
+  }, []);
+
+  const handleClearCart = useCallback(() => setCartItems([]), []);
+
+  const handlePlaceOrder = useCallback((shippingAddress) => {
+    const subtotal = cartItems.reduce((s, i) => s + i.product.price * i.quantity, 0);
+    const shipping = subtotal > 0 ? 9.99 : 0;
+    const order = {
+      id:        (globalThis.crypto?.randomUUID?.()) || `order-${Date.now()}`,
+      userId:    currentUser?.id,
+      items:     cartItems.map(i => ({
+        productId:     i.product.id,
+        productName:   i.product.name,
+        productImage:  i.product.image,
+        price:         i.product.price,
+        quantity:      i.quantity,
+        selectedColor: i.selectedColor,
+        selectedSize:  i.selectedSize,
+      })),
+      subtotal,
+      shipping,
+      total:     subtotal + shipping,
+      shippingAddress,
+      status:    'confirmed',
+      createdAt: new Date().toISOString(),
+    };
+    setOrders(prev => [order, ...prev]);
+    setLastOrder(order);
+    handleClearCart();
+    navigate('thankyou');
+  }, [cartItems, currentUser, handleClearCart, notify, navigate]);
 
   // ── Infinite products (Gold) ─────────────────────────────────
   const [search, setSearch] = useState('');
@@ -309,6 +410,16 @@ export default function App() {
         serverHealthy={serverHealthy} queueSize={queueSize} syncing={syncing}
       />
 
+      {/* Cart drawer — always in DOM for smooth slide transition */}
+      <CartDrawer
+        isOpen={cartOpen}
+        items={cartItems}
+        onClose={() => setCartOpen(false)}
+        onRemove={handleRemoveFromCart}
+        onUpdateQty={handleUpdateCartQty}
+        onCheckout={() => { setCartOpen(false); navigate('checkout'); }}
+      />
+
       {view === 'landing' && (
         <PresentationPage key={transKey} onEnter={() => navigate('master')} />
       )}
@@ -332,7 +443,7 @@ export default function App() {
             onAdd={() => navigate('add')}
             onStats={() => navigate('stats')}
             onHome={() => navigate('landing')}
-            onAtelier={() => navigate('atelier')}
+            onAtelier={canWrite ? () => navigate('atelier') : null}
             onUsers={isAdmin ? () => navigate('users') : null}
             onLogs={isAdmin ? () => navigate('logs') : null}
             onObservation={isAdmin ? () => navigate('observation') : null}
@@ -340,6 +451,10 @@ export default function App() {
             canWrite={canWrite}
             currentUser={currentUser}
             sideCharts={<LiveCharts products={infProducts.items} />}
+            onCartOpen={() => setCartOpen(true)}
+            cartItemCount={cartItemCount}
+            onAccount={() => navigate('orderHistory')}
+            onNavigate={view => navigate(view)}
           />
           {canGenerate && <GeneratorPanel realtime={realtime} online={online} />}
         </>
@@ -352,7 +467,8 @@ export default function App() {
           onBack={() => navigate('master')}
           onEdit={id => navigate('edit', { id })}
           onDelete={handleDelete}
-          onAtelier={() => navigate('atelier')}
+          onAtelier={canWrite ? () => navigate('atelier') : null}
+          onAddToCart={handleAddToCart}
           online={online}
           canWrite={canWrite}
         />
@@ -366,6 +482,45 @@ export default function App() {
           onAdd={() => navigate('addFromStats')}
           onEdit={handleEditFromStats}
           onDelete={handleDeleteFromStats}
+          canWrite={canWrite}
+        />
+      )}
+
+      {view === 'checkout' && (
+        <CheckoutPage
+          key={transKey}
+          items={cartItems}
+          onBack={() => navigate('master')}
+          onPlaceOrder={handlePlaceOrder}
+        />
+      )}
+
+      {view === 'thankyou' && lastOrder && (
+        <TicketMachinePage
+          key={transKey}
+          order={lastOrder}
+          currentUser={currentUser}
+          onSaveCoupon={handleSaveCoupon}
+          onContinue={() => navigate('master')}
+        />
+      )}
+
+      {view === 'orderHistory' && (
+        <OrderHistoryPage
+          key={transKey}
+          orders={orders}
+          currentUser={currentUser}
+          onBack={() => navigate('master')}
+          onShop={() => navigate('master')}
+        />
+      )}
+
+      {(view === 'about' || view === 'contact' || view === 'terms') && (
+        <StaticPage
+          key={transKey}
+          type={view}
+          onBack={() => navigate('master')}
+          onNavigate={view => navigate(view)}
         />
       )}
 
