@@ -291,7 +291,7 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder, coupons = []
                   <span className="checkout-coupon__applied-label">
                     ✦ {appliedCoupon.label}
                   </span>
-                  <button className="checkout-coupon__remove" onClick={handleRemoveCoupon}>
+                  <button type="button" className="checkout-coupon__remove" onClick={handleRemoveCoupon}>
                     ✕
                   </button>
                 </div>
@@ -304,7 +304,7 @@ export default function CheckoutPage({ items, onBack, onPlaceOrder, coupons = []
                     onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponMsg({ text: "", ok: false }); }}
                     onKeyDown={e => e.key === "Enter" && handleApplyCoupon()}
                   />
-                  <button className="checkout-coupon__btn" onClick={handleApplyCoupon}>
+                  <button type="button" className="checkout-coupon__btn" onClick={handleApplyCoupon}>
                     APPLY
                   </button>
                 </div>
