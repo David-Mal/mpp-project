@@ -1,6 +1,22 @@
 # Estethis — Luxury Fashion E-Commerce Platform
 
-App Link: [https://mpp-project-z3qj.onrender.com](https://mpp-project-z3qj.onrender.com)
+App deployed with Render at: [https://mpp-project-z3qj.onrender.com](https://mpp-project-z3qj.onrender.com)
+
+(Render's free tier web services spin down after **15 minutes** of receiving no incoming traffic or inactivity.)
+
+(**Cold Starts:** The next incoming request takes roughly 30 to 60 seconds (or up to a minute) to respond while the server boots back up.)
+
+User credentials:
+
+email: [user@estethis.com](mailto:user@estethis.com)
+
+password: user123
+
+Admin credentials:
+
+email: [admin@estethis.com](mailto:admin@estethis.com)
+
+password: admin123
 
 Full-stack web application for browsing, purchasing, and managing a high-end fashion catalogue. The UI uses a dark/gold aesthetic. The stack combines **React 19**, **Vite**, **Express 5**, **Sequelize**, and **SQLite** (with optional PostgreSQL), plus **WebSockets** for live updates and a client-side **offline queue** for resilient catalog management.
 
